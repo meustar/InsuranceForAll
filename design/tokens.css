@@ -1,0 +1,52 @@
+/**
+ * Insurance For All — design tokens (SSOT: DESIGN.md §2–§3)
+ * Tailwind CSS 4 @theme · apps/web/app/globals.css 에서 @import
+ *
+ * Stitch baseline: Institutional Minimal (Light)
+ * https://stitch.withgoogle.com/projects/17570932267095502369
+ */
+
+@theme {
+  /* Brand */
+  --color-brand: #123056;
+  --color-brand-hover: #1a3d6b;
+  --color-brand-active: #0b1f3a;
+  --color-on-brand: #ffffff;
+
+  /* Ink */
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+
+  /* Surfaces */
+  --color-surface-page: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+
+  /* Borders & states */
+  --color-border: #e2e8f0;
+  --color-border-strong: #cbd5e1;
+  --color-danger: #b91c1c;
+
+  /* Charts (D3) */
+  --color-chart-a: #123056;
+  --color-chart-b: #64748b;
+  --color-chart-male: #2563eb;
+  --color-chart-female: #94a3b8;
+  --color-chart-grid: #e2e8f0;
+  --color-chart-label: #64748b;
+
+  /* Typography — Pretendard Variable preferred; Noto Sans KR fallback */
+  --font-sans: "Pretendard Variable", Pretendard, "Noto Sans KR", system-ui,
+    -apple-system, sans-serif;
+
+  /* Radius */
+  --radius-card: 12px;
+  --radius-input: 10px;
+  --radius-btn-primary: 12px;
+  --radius-btn-secondary: 10px;
+
+  /* Layout (reference — use in components) */
+  --header-height: 64px;
+  --content-max-width: 1040px;
+  --shadow-card: 0 1px 3px rgb(15 23 42 / 0.08);
+}

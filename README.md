@@ -15,7 +15,7 @@
 | 2 | [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) | F-ID · API · UAT |
 | 3 | [FLOWCHARTS.md](./FLOWCHARTS.md) | P0 흐름 |
 | 4 | [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) | 3API 입력·인사이트·그래프·AI (**상세 SSOT**) |
-| 5 | [DESIGN.md](./DESIGN.md) | Stitch·UI 토큰·공통 크롬·카피 금지 (**시각 UX**) |
+| 5 | [DESIGN.md](./DESIGN.md) | Stitch·UI 토큰·공통 크롬·카피 금지 (**시각 UX**) · [Stitch 프로토타입](https://stitch.withgoogle.com/projects/17570932267095502369) |
 | 6 | [ERD.md](./ERD.md) | 스키마 v1.5+ (**물리 SSOT**) |
 | 7 | [TECH_STACK.md](./TECH_STACK.md) | 버전·인프라·D3 |
 | 8 | [ENVIRONMENT.md](./ENVIRONMENT.md) | API 키·`.env`·GitHub·배포 보안 |

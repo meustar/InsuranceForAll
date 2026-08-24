@@ -7,6 +7,9 @@
 
 **Stitch Prompt Guide 정합:** [Stitch Prompt Guide](https://discuss.ai.google.dev/t/stitch-prompt-guide/83844) — vibe adjectives · theme(색/폰트/보더) 분리 · 화면별 점진 수정 · UI/UX 키워드 · 한 번에 한 가지 변경.
 
+**Stitch 프로토타입 (시각 골격):** [모두의 보험 통계 허브 — Stitch project](https://stitch.withgoogle.com/projects/17570932267095502369)  
+Style Guide 화면명 **Institutional Minimal** · P0는 **Light** 변형만 사용(Dark/Navy 변형은 Stitch 미리보기용, 제품 기본 아님).
+
 ---
 
 ## 0. Stitch에서 이 파일을 쓰는 법
@@ -15,6 +18,20 @@
 2. 채팅 후속에는 짧게: `Follow DESIGN.md. Do not create any new pages. Edit the selected screen(s) only.`  
 3. **테마만** 바꿀 때 새 페이지를 만들지 않는다. **한 화면·한 요소**만 고친다.  
 4. 잘 나온 화면은 스크린샷으로 저장한다.
+
+### 0.1 Stitch 산출물 vs 구현 정본
+
+Stitch 프로젝트는 **페이지 IA·카드·차트 자리·톤**의 골격으로 채택한다. 다만 화면마다 **Header·Footer·버튼 높이·radius·보조 링크 스타일**이 어긋날 수 있다. **코드·후속 Stitch 수정·리뷰는 본 문서(§2–§6)를 정본**으로 통일한다.
+
+| Stitch에 있을 수 있음 (채택 안 함) | 구현·정본 (§5–§6) |
+|-----------------------------------|-------------------|
+| 햄버거 메뉴, Export, Sign In | **없음** — 로그인·관리자 UI 없음 |
+| Header 우측 계정·설정 슬롯 | **RIGHT EMPTY** |
+| 화면마다 다른 primary/secondary 버튼 radius | Primary **12px** · Secondary **10px** · 높이 **48/44px** |
+| 카드 하단 보조 링크가 primary처럼 보임 | **Caption 13px** + `color.text-secondary` · primary와 동급 solid 금지 |
+| Stitch 프리뷰 chrome(프로젝트 제목 바) | 제품 UI 아님 — 무시 |
+
+---
 
 | 가이드 원칙 | 본 문서에서의 대응 |
 |-------------|-------------------|
@@ -45,51 +62,86 @@
 
 ## 2. Color tokens
 
-| Token | Role | Approx |
-|-------|------|--------|
-| `color.primary` | CTA, active tab | Deep navy `#0B1F3A`–`#123056` |
-| `color.primary-hover` | Primary hover | Lighter navy |
-| `color.text` | Primary text | `#0F172A` |
-| `color.text-secondary` | Helper, inactive tab, meta | `#64748B` |
-| `color.text-on-primary` | On navy | `#FFFFFF` |
-| `color.bg-page` | Page | `#F1F5F9` |
-| `color.bg-surface` | Header, cards, form | `#FFFFFF` |
-| `color.bg-muted` | Notice, footer | `#F8FAFC` / `#E2E8F0` |
-| `color.border` | Dividers, inputs | `#E2E8F0` |
-| `color.danger` | Errors only | `#B91C1C` |
+**테마명:** Institutional Minimal (Stitch Style Guide · Light)  
+**원칙:** 딥 네이비 1개 + 슬레이트 그레이 계열. 보라·테라코타·네온 액센트 금지.
 
-**규칙:** WCAG AA 대비. 두 번째 브랜드 액센트(보라·테라코타) 추가 금지. 차트는 navy+slate; 남·여 시리즈는 구분 가능한 두 중립/블루 — “최적 상품” 신호색 금지.
+| Token | Role | Hex | Tailwind alias (§11) |
+|-------|------|-----|----------------------|
+| `color.primary` | CTA, active tab, chart 주 시리즈 | `#123056` | `brand` |
+| `color.primary-hover` | Primary hover | `#1A3D6B` | `brand-hover` |
+| `color.primary-active` | Primary pressed | `#0B1F3A` | `brand-active` |
+| `color.text` | Primary text, headings | `#0F172A` | `ink` |
+| `color.text-secondary` | Helper, inactive tab, meta, 보조 링크 | `#64748B` | `ink-muted` |
+| `color.text-on-primary` | On navy buttons/tabs | `#FFFFFF` | `on-brand` |
+| `color.bg-page` | Page background | `#F1F5F9` | `surface-page` |
+| `color.bg-surface` | Header, cards, form panels | `#FFFFFF` | `surface` |
+| `color.bg-muted` | Notice strip, footer | `#F8FAFC` | `surface-muted` |
+| `color.border` | Dividers, inputs, card outline | `#E2E8F0` | `border` |
+| `color.border-strong` | Focus ring, emphasized divider | `#CBD5E1` | `border-strong` |
+| `color.danger` | Errors only | `#B91C1C` | `danger` |
+| `color.focus-ring` | Keyboard focus (primary 계열) | `#123056` @ 2px | — |
 
-**Stitch theme cue:** deep navy primary, white surfaces, light cool-gray page, soft gray borders.
+**Chart (D3 · Stitch 데이터 화면 정렬):**
+
+| Token | Role | Hex |
+|-------|------|-----|
+| `color.chart-series-a` | 주 막대·선 (실손·자동차·생명 공통) | `#123056` |
+| `color.chart-series-b` | 보조·비교 막대 | `#64748B` |
+| `color.chart-series-male` | 덤벨·남성 시리즈 | `#2563EB` |
+| `color.chart-series-female` | 덤벨·여성 시리즈 | `#94A3B8` |
+| `color.chart-grid` | 축·그리드 | `#E2E8F0` |
+| `color.chart-label` | 축 라벨 | `#64748B` |
+
+**Surface elevation (Stitch 카드 그림자):**
+- Card shadow: `0 1px 3px rgba(15, 23, 42, 0.08)` — 장식용 다층 그림자 금지
+
+**규칙:** WCAG AA 대비. “최적 상품”·순위 강조용 초록/금색 금지.
+
+**Stitch theme cue (Edit Theme에 붙여넣기):**  
+`Institutional Minimal · primary #123056 · page #F1F5F9 · surface white · text #0F172A · secondary #64748B · borders #E2E8F0 · Pretendard or Noto Sans KR · 8–12px radius · no purple terracotta neon`
 
 ---
 
 ## 3. Typography · borders · controls
 
-한국어 가독용 **sans-serif** (Pretendard / Noto Sans KR 계열). 본문에 playful display 금지.
+**Font stack (Stitch Style Guide · 한국어):**
+
+```text
+"Pretendard Variable", Pretendard, "Noto Sans KR", system-ui, -apple-system, sans-serif
+```
+
+- **1순위:** Pretendard Variable (CDN 또는 self-host)  
+- **폴백:** [Noto Sans KR](https://fonts.google.com/noto/specimen/Noto+Sans+KR) (Stitch 기본에 가까움)  
+- 본문에 playful display·장식 serif 금지
 
 | Role | Size | Weight | LH | Use |
 |------|------|--------|-----|-----|
-| Brand / Display | 36–40px | Bold | 1.2 | 메인 히어로 브랜드만 |
-| H1 | 28px | Bold | 1.25 | 화면 제목 |
-| H2 | 20–22px | Semibold | 1.3 | 섹션 |
-| H3 | 17–18px | Semibold | 1.35 | 카드·패널 제목 |
-| Body | 16px | Regular | 1.5 | 본문·AI |
-| Label | 14px | Semibold | 1.4 | 폼 라벨 |
-| Secondary | 14px | Regular | 1.45 | 보조 |
-| Caption | 12–13px | Regular | 1.4 | 고지·출처·차트 캡션 |
-| KPI number | 28–32px | Bold | 1.2 | 지표 |
-| KPI label | 13–14px | Regular | 1.3 | 지표 라벨 |
+| Brand / Display | 36–40px | Bold (700) | 1.2 | 메인 히어로 브랜드만 |
+| H1 | 28px | Bold (700) | 1.25 | 화면 제목 |
+| H2 | 20–22px | Semibold (600) | 1.3 | 섹션 |
+| H3 | 17–18px | Semibold (600) | 1.35 | 카드·패널 제목 |
+| Body | 16px | Regular (400) | 1.5 | 본문·AI |
+| Label | 14px | Semibold (600) | 1.4 | 폼 라벨 |
+| Secondary | 14px | Regular (400) | 1.45 | 보조 문단 |
+| Caption | 13px | Regular (400) | 1.4 | 고지·출처·차트 캡션·**허브/PDF/상담 보조 링크** |
+| KPI number | 28–32px | Bold (700) | 1.2 | 지표 |
+| KPI label | 13–14px | Regular (400) | 1.3 | 지표 라벨 |
+| Nav brand | 18px | Semibold (600) | 1.3 | Header “모두의 보험” |
+| Nav tab | 15px | Medium (500) / Semibold active | 1.35 | 실손·자동차·생명 탭 |
 
 **하드 룰:** Body ≥ 14px, Caption ≥ 12px. 화면마다 임의 중간 사이즈 금지.
 
-**Borders / radius (theme):**
-- Input / card radius ≈ 8–12px  
-- Primary button radius ≈ 10–12px  
-- Input border: 1–2px solid `color.border`  
+**Borders / radius (theme · Stitch 카드·버튼 정렬):**
+- Card radius: **12px**  
+- Input radius: **10px**  
+- Primary button radius: **12px**  
+- Secondary / ghost button radius: **10px**  
+- Chip radius: **9999px** (pill)  
+- Input border: 1px solid `color.border`; focus 2px `color.focus-ring`  
 - Input / primary button height: **48px**  
-- Secondary button height: **44–48px**  
-- Hit target ≥ **44×44px** (WCAG 2.2 / Fitts)
+- Secondary button height: **44px** (min hit 44×44)  
+- Ghost text control height: **44px** hit area  
+- Card border: 1px `color.border` + §2 card shadow
 
 ---
 
@@ -156,11 +208,14 @@
 
 ### Buttons
 
-| Type | Style | Height | When |
-|------|-------|--------|------|
-| Primary | Solid navy, white | 48px | 화면당 주 과업 1개 (예: “통계 보기”) |
-| Secondary | Outline / light | 44–48px | 스코프 이동, PDF·상담 |
-| Ghost | Text (+icon), 44 hit | 44px | 「이전」, “입력 수정” |
+| Type | Style | Height | Radius | When |
+|------|-------|--------|--------|------|
+| Primary | Solid `color.primary`, `color.text-on-primary` | 48px | 12px | 화면당 주 과업 1개 (예: “통계 보기”) |
+| Secondary | 1px `color.border`, bg `color.bg-surface`, text `color.text` | 44px | 10px | 스코프 이동, PDF·상담 |
+| Ghost | Text `color.primary` or `color.text-secondary`, underline optional | 44px hit | — | 「이전」, “입력 수정”, 「통계로 돌아가기」 |
+| Text link (허브 보조) | Caption 13px, `color.text-secondary`, hover `color.primary` | 44px hit | — | 허브 카드 하단 PDF·상담 링크 |
+
+Primary hover → `color.primary-hover`. Disabled → opacity 0.45, pointer-events none.
 
 ### Form (Main)
 
@@ -171,7 +226,7 @@
 
 ### Cards
 
-- White, light border, radius ~12px  
+- `color.bg-surface`, 1px `color.border`, radius **12px**, shadow §2  
 - Hub: **equal-weight** 3 cards — ranking/추천 배지 금지  
 - Hero에 장식 카드 남발 금지
 
@@ -290,8 +345,22 @@ Filters (identity 아님): health `보험유형`/`담보` · auto `종목`/`차�
 ## 11. Implementation handoff (Stitch 밖)
 
 목표 프론트: Next.js App Router + React + **JavaScript** + Tailwind CSS 4 + **D3.js** (Client + `ref`).  
-Stitch 산출물은 시각 골격; 차트·API·개인정보 경계는 코드·`PAGE_PLAN`/`FUNCTIONAL_SPEC`을 따른다.  
-프로토타입 경로: Stitch(DESIGN.md) → (선택) export → `apps/web` 이식.
+Stitch 산출물은 시각 골격; **색·타입·Header/Footer/버튼은 DESIGN.md 정본**으로 통일한다. 차트·API·개인정보 경계는 `PAGE_PLAN`/`FUNCTIONAL_SPEC`을 따른다.  
+프로토타입 경로: [Stitch project](https://stitch.withgoogle.com/projects/17570932267095502369) → `design/tokens.css` → `apps/web` 이식.
+
+### 11.1 Tailwind CSS 4 theme (`design/tokens.css`)
+
+`apps/web` 스캐폴딩 시 `app/globals.css`에서 import:
+
+```css
+@import "../../../design/tokens.css";
+```
+
+또는 `@theme` 블록을 `globals.css`에 직접 복사. **값 변경 시 DESIGN.md §2–§3와 동시 갱신.**
+
+### 11.2 D3 chart stroke/fill
+
+차트 SVG는 CSS 변수 또는 hex 상수로 §2 chart 토큰만 사용. Recharts/Chart.js 테마 import 금지.
 
 ---
 
@@ -302,7 +371,8 @@ Stitch 산출물은 시각 골격; 차트·API·개인정보 경계는 코드·`
 | `PRD.md` / `FUNCTIONAL_SPEC.md` | 제품·F-ID |
 | `PUBLIC_API_PAGE_PLAN.md` | 화면·차트·카피 상세 SSOT |
 | `FLOWCHARTS.md` | 여정 |
-| `TECH_STACK.md` | 구현 스택 |
+| `TECH_STACK.md` | 구현 스택 · Stitch project URL |
+| `design/tokens.css` | Tailwind 4 `@theme` (§2–§3 미러) |
 | `README.md` | 읽을 순서 |
 
 UI 토큰·공통 크롬·카피 금지가 바뀌면 **이 파일과** 영향 화면 설명을 같이 갱신한다.

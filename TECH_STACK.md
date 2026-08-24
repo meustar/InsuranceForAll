@@ -49,7 +49,9 @@
   PostgreSQL 17.11 (postgres:17.11-alpine)
 
 [프로토타입 UI]
-  Google Stitch (+ `DESIGN.md` 테마 잠금) → (선택) Figma/v0 → 이 레포 apps/web 에 JS로 이식
+  Google Stitch — [모두의 보험 통계 허브 (project)](https://stitch.withgoogle.com/projects/17570932267095502369)
+  테마: Institutional Minimal (Light) · 토큰 정본 DESIGN.md §2–§3 · CSS `design/tokens.css`
+  → (선택) export → apps/web JS 이식
   시각·공통 UX 정본: DESIGN.md · 차트 유형 정본: PUBLIC_API_PAGE_PLAN.md §3
 
 [Analytics]

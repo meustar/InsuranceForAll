@@ -20,4 +20,13 @@
 **/redis-data/**
 **/data/**
 
+**/*.crt
+**/*.cer
+docker-compose.*.local.yml
+**/.aws/**
+**/.npmrc
+**/.netrc
+**/tmp/**
+**/temp/**
+
 docker-compose.override.yml
