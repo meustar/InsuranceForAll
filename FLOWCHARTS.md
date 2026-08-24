@@ -2,7 +2,7 @@
 
 **프로젝트:** 모두의 보험 (Insurance For All)  
 **버전:** 2026-08-24 (MVP 1.4 — Tab 허브 여정 · 차트 유형)
-**관련:** [PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [ENVIRONMENT.md](./ENVIRONMENT.md)
+**관련:** [PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [DESIGN.md](./DESIGN.md) · [ENVIRONMENT.md](./ENVIRONMENT.md)
 
 - **1장:** P0 필수  
 - **2장:** P1/P2 전체 (데모 범위 아님)

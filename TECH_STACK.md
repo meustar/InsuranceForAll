@@ -2,7 +2,7 @@
 
 **프로젝트:** 모두의 보험 (Insurance For All)  
 **작성 기준일:** 2026-08-20 · **MVP 1.4 갱신:** 2026-08-24 (D3.js 차트 유형 · Tab 여정)
-**관련 문서:** [PRD.md](./PRD.md), [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md), [FLOWCHARTS.md](./FLOWCHARTS.md), [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md), [ENVIRONMENT.md](./ENVIRONMENT.md)
+**관련 문서:** [PRD.md](./PRD.md), [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md), [FLOWCHARTS.md](./FLOWCHARTS.md), [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md), [DESIGN.md](./DESIGN.md), [ENVIRONMENT.md](./ENVIRONMENT.md)
 
 원칙: **서로 공식 문서에서 호환이 확인된 안정(LTS/stable) 조합만 사용**한다.  
 패치 버전(`x.y.z`의 `z`)은 배포 직전 보안 패치로 올려도 된다. **메이저 버전은 이 표에서 바꾸지 않는다.**
@@ -87,7 +87,7 @@
 
 ---
 
-## 3. 프론트: JavaScript + Figma Make + v0
+## 3. 프론트: JavaScript + Google Stitch + DESIGN.md
 
 ### 3.1 언어
 
@@ -99,16 +99,16 @@ npx create-next-app@16.3.1 apps/web --js --tailwind --eslint --app --no-src-dir 
 
 공식 플래그: `--js` 또는 `--javascript`. ([create-next-app](https://nextjs.org/docs/app/api-reference/cli/create-next-app))
 
-v0가 `.tsx`를 주면 **같은 폴더에서 `.jsx`로 바꾸고 `tsconfig.json`을 넣지 않는다.** 프롬프트에 다음을 고정한다.
+v0·Figma Make 등 **다른 도구**가 `.tsx`를 주면 **같은 폴더에서 `.jsx`로 바꾸고 `tsconfig.json`을 넣지 않는다.** 프롬프트에 다음을 고정한다.
 
 > Use Next.js App Router, JavaScript only (no TypeScript), Tailwind CSS. Do not generate .ts or .tsx files.
 
-### 3.2 프로토타입 파이프라인
+### 3.2 프로토타입 파이프라인 (1순위: Stitch)
 
-1. **Figma Make / Google Stitch**로 랜딩 → 입력 → **통계 허브** → 스코프 탭(+ 하단 PDF·상담 CTA) → `/documents` → `/consultations` 화면을 만든다.
-2. **v0**에 Figma 링크 또는 스크린샷을 넣고 위 JS 제약을 건다. ([v0 + Figma](https://vercel.com/blog/working-with-figma-and-custom-design-systems-in-v0))
-3. 생성된 UI를 `apps/web`에 붙이고, 데이터는 FastAPI(`/api`는 nginx가 백엔드로 프록시)만 호출한다. 차트는 **D3**로 이식한다.
-4. v0 기본 컴포넌트(shadcn/ui)를 써도 되지만, **런타임은 React 19 + Next 16**과 맞춰 의존성을 올리지 않는다. v0가 Recharts 등을 넣으면 **제거하고 D3로 교체**한다.
+1. **[Google Stitch](https://stitch.withgoogle.com/projects/17570932267095502369)** + [DESIGN.md](./DESIGN.md) + `design/tokens.css`로 랜딩 → 입력 → **통계 허브** → 스코프 탭(+ 하단 PDF·상담 CTA) → `/documents` → `/consultations` IA·톤을 잠근다.
+2. Stitch export 또는 수동 이식으로 `apps/web`에 붙인다. 공통 Header/Footer·버튼은 **DESIGN.md §5–§6** 정본(Stitch 화면별 불일치는 DESIGN 우선).
+3. 데이터는 FastAPI만 호출(`/api`는 nginx가 백엔드로 프록시). 차트는 **D3**로 구현·이식한다.
+4. **선택·보조:** Figma Make / v0 — 크레딧·일정상 Stitch 보완용. Recharts 등이 들어오면 **제거하고 D3로 교체**한다.
 
 ### 3.3 패키지 예시 (`apps/web/package.json`)
 
@@ -211,7 +211,34 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 
 비용은 배포 직전 [AWS Pricing Calculator](https://calculator.aws/)로 재확인한다. 서울 Linux t4g.medium On-Demand는 대략 월 $30 전후 + 디스크·전송 + OpenAI 사용료.
 
----
+### 5.1 Docker Compose · nginx · HTTPS (EC2 운영)
+
+로컬은 `docker-compose.yml`, EC2는 `docker-compose.prod.yml`(예정). 비밀값은 [ENVIRONMENT.md](./ENVIRONMENT.md) · `.env.example` 변수명만; 이미지·Dockerfile에 키를 굽지 않는다.
+
+**Compose network (3-Tier 분리 · 예정 이름):**
+
+| Network | 서비스 | 비고 |
+|---------|--------|------|
+| `net-edge` | nginx, web | 외부 HTTPS 종단 |
+| `net-app` | web, api, worker, redis | 애플리케이션 |
+| `net-data` | api, worker, postgres, redis | postgres·redis는 **호스트 포트 publish 금지** |
+
+**nginx (Tier-1):** `infra/nginx/nginx.conf`(예정) · 이미지 `nginx:1.30.4-alpine`
+
+- `:80` → `:443` 리다이렉트
+- `:443` TLS — Let's Encrypt **certbot**(도메인 A레코드 → EC2 Elastic IP 후 발급). 인증서는 볼륨 mount
+- `/` → `http://web:3000` (Next.js)
+- `/api` → `http://api:8000` (FastAPI; path prefix strip 또는 api가 `/api/v1` 수신)
+
+**운영 env (Compose, 값은 EC2 `.env`만):**
+
+- `API_INTERNAL_URL=http://api:8000` — web → api (Docker DNS)
+- `SESSION_COOKIE_SECURE=true` — HTTPS 운영
+- `CELERY_CONCURRENCY=1`
+
+**EC2 초기 설정 (요지):** Ubuntu 26.04 · `apt update && apt upgrade` · Docker Engine + Compose v2 · ufw 22/80/443 · repo clone · 저장소 밖 `.env`(chmod 600) · `docker compose -f docker-compose.prod.yml up -d --build` · Alembic migrate · sync 1회.
+
+상세 secret·노출 대응은 ENVIRONMENT §5·§6.
 
 ## 6. API 키·비밀정보
 
@@ -232,18 +259,23 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 
 ```text
 Insurance_For_All/
-  apps/web/          # Next.js 16, JavaScript
-  apps/api/          # FastAPI + Alembic
-  apps/worker/       # Celery (api 패키지 공유 가능)
-  docker-compose.yml
-  .env.example       # 변수명만, 실제 값 금지
+  apps/web/              # Next.js 16, JavaScript (+ Dockerfile 예정)
+  apps/api/              # FastAPI + Alembic (+ Dockerfile 예정)
+  apps/worker/           # Celery (+ Dockerfile 예정)
+  infra/nginx/           # nginx.conf (예정)
+  design/tokens.css      # Tailwind 4 @theme — DESIGN.md §2–§3 미러
+  DESIGN.md
+  docker-compose.yml     # 로컬 (예정)
+  docker-compose.prod.yml  # EC2 (예정)
+  .env.example
   .gitignore
   .dockerignore
-  .cursorignore      # AI 컨텍스트 제외 패턴 (비밀·uploads·logs)
+  .cursorignore
   ENVIRONMENT.md
   PRD.md
   FUNCTIONAL_SPEC.md
   FLOWCHARTS.md
+  PUBLIC_API_PAGE_PLAN.md
   TECH_STACK.md
   README.md
 ```

@@ -3,7 +3,7 @@
 **프로젝트:** 모두의 보험 (Insurance For All)  
 **버전:** MVP 1.4 — 2026-08-24 (Tab 허브 여정 · D3.js 차트 유형)
 **마감:** 2026-08-27 **P0만**  
-**관련:** [PRD.md](./PRD.md) · [FLOWCHARTS.md](./FLOWCHARTS.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [ERD.md](./ERD.md) · [TECH_STACK.md](./TECH_STACK.md)
+**관련:** [PRD.md](./PRD.md) · [FLOWCHARTS.md](./FLOWCHARTS.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [DESIGN.md](./DESIGN.md) · [ERD.md](./ERD.md) · [TECH_STACK.md](./TECH_STACK.md)
 
 기능 ID(`F-01`~`F-14`)는 유지. **수용 범위·입출력**은 MVP 1.4 기준.
 
@@ -66,6 +66,7 @@
 - **공통 출력:** 기준일/년월, 출처, stale 시 안내, 견적·가입 권유 아님  
 - **금지 카피:** 실손 totalCount=가입자, 생명 건수=명, 직업·유병력 매칭 위장, 허브의 추천·순위  
 - **수용:** PDF 없이 동작. MVP **최소 2개 스코프** 통계 표시 (방문 순서 무관)
+- **UI:** 공통 Header/Footer·버튼·토큰은 [DESIGN.md](./DESIGN.md) §5–§6 및 `design/tokens.css` 준수
 
 각 스코프 탭 **하단 F-07**(해당 scope) 아래 **선택 CTA**(PDF→`/documents`, 이메일 상담→`/consultations`). 허브 AI는 P0 비필수.
 

@@ -321,6 +321,7 @@ CREATE TABLE consultation_requests (
   consent_notice_version VARCHAR(32) NOT NULL,
   -- AES-256-GCM: nonce||ciphertext||tag 를 한 BYTEA에 저장 (별도 nonce 컬럼 없음)
   contact_encrypted   BYTEA NOT NULL,
+  -- P0 UI·API: contact_channel='email' 만. 'phone'은 P1+ 예약 (DDL CHECK는 확장용 유지)
   contact_channel     VARCHAR(16) NOT NULL
                       CHECK (contact_channel IN ('phone', 'email')),
   purpose_note_encrypted BYTEA,  -- 동일 포맷, 미입력 시 NULL

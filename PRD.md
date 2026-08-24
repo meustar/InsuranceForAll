@@ -3,7 +3,7 @@
 **제품명:** 모두의 보험 (Insurance For All)  
 **문서 버전:** MVP 1.4 (2026-08-24 — Tab 허브 여정 · D3.js 차트 유형)
 **구현 마감:** 2026-08-27  
-**관련:** [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [FLOWCHARTS.md](./FLOWCHARTS.md) · [TECH_STACK.md](./TECH_STACK.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [ERD.md](./ERD.md) · [ENVIRONMENT.md](./ENVIRONMENT.md)
+**관련:** [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [FLOWCHARTS.md](./FLOWCHARTS.md) · [TECH_STACK.md](./TECH_STACK.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [DESIGN.md](./DESIGN.md) · [ERD.md](./ERD.md) · [ENVIRONMENT.md](./ENVIRONMENT.md)
 
 **SSOT:** 화면·API 입력·인사이트 상세는 [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md), 물리 스키마는 [ERD.md](./ERD.md) v1.5+. 본 PRD와 충돌 시 위 두 문서·본 버전(1.4)을 우선한다.
 
@@ -24,7 +24,7 @@
 |------|------|
 | 프로젝트 루트 | 이 저장소의 최상위 디렉터리(`Insurance_For_All`) |
 | 프론트 | **JavaScript만** |
-| UI | Figma Make → v0 → 이 레포 |
+| UI | **Google Stitch** ([프로젝트](https://stitch.withgoogle.com/projects/17570932267095502369)) + [DESIGN.md](./DESIGN.md) → `apps/web` (JavaScript). Figma Make·v0는 **보류·선택** |
 | 마감 | 2026-08-27, **P0만** |
 | 관리자 | **P1** |
 | 통계 여정 | **메인 → `/stats` 허브 → 사용자 선택 탭** (`health`\|`auto`\|`life`). **순서 강제 없음**. 「이전」→ 허브 |
@@ -183,17 +183,17 @@
 
 ---
 
-## 14. 7일 일정 (요지)
+## 14. 마감까지 남은 작업 (참고 · 2026-08-25 기준)
 
-| 날짜 | 산출물 |
-|------|--------|
-| 8/21 | Compose, ERD v1.5 스키마, FastAPI·Next 뼈대 |
-| 8/22 | 메인(소개+입력), 보험나이 어댑터 |
-| 8/23 | F-11 + 허브 + 실손 탭 UI (D3) |
-| 8/24 | 자동차·생명 탭 · 차트 유형 문서 확정(PAGE_PLAN §3) |
-| 8/25 | PDF 워커 |
-| 8/26 | 스코프별 AI, 상담, 고지 |
-| 8/27 | E2E·데모 |
+**현재:** 문서 SSOT·Stitch 프로토타입·`design/tokens.css`까지 확정. **`apps/*` 코드·Compose·EC2 배포는 미구현.**  
+**데모 목표:** 2026-08-27 (P0 UAT §6)
+
+| 단계 | 내용 |
+|------|------|
+| A. 로컬 구현 | Compose + api/worker/web · ERD migration · F-11 sync · stats/AI/PDF/상담 API · 7화면 + D3 |
+| B. EC2 배포 | t4g.medium · Ubuntu 26.04 · Docker · nginx 443 SSL · `docker-compose.prod.yml` 3-Tier network |
+
+과거 8/21~8/24 일정은 **문서·Stitch 확정**까지 반영됨. 상세 기술 순서는 [TECH_STACK.md](./TECH_STACK.md) §5·§8.
 
 ---
 
