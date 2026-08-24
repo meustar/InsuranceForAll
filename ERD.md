@@ -1,7 +1,7 @@
 # ERD — 모두의 보험 (Insurance For All)
 
-**버전:** MVP 1.4 (2026-08-20) — **사용자 입력 비영속(PG 미저장) 원칙 복원**  
-**근거:** [PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md)  
+**버전:** MVP 1.5 (2026-08-21) — **비영속·토큰·메타데이터 보안 보강**
+**근거:** [PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [ENVIRONMENT.md](./ENVIRONMENT.md)
 **DB:** PostgreSQL 17.11 = **공공 캐시·(선택) PDF/AI 산출물·상담(동의 후)** 만  
 
 ---
@@ -10,7 +10,7 @@
 
 ### 0.1 사용자가 지적한 설계 원칙
 
-> **사용자의 입력 정보(생년월일·성별·지역·직업·유병력 등)는 화면에 쓰기 위해 받을 뿐, PostgreSQL에 저장하지 않는다.**
+> **P0 사용자 입력은 생년월일·성별·지역으로 제한하고, 화면에 쓰기 위해 받을 뿐 PostgreSQL에 저장하지 않는다. 직업·유병력은 수집하지 않는다.**
 
 이 원칙이 제품 약속(이름·연락처·주민번호 없이 탐색, 최소 수집)과 맞다.  
 v1.2–1.3 ERD의 `session_profiles`에 `birth_date` 등을 둔 것은 **이 원칙을 깨뜨린 잘못된 확장**이다.
@@ -19,60 +19,60 @@ v1.2–1.3 ERD의 `session_profiles`에 `birth_date` 등을 둔 것은 **이 원
 
 | 자료 | 원래 적힌 것 | 이번에 맞추는 해석 |
 |------|--------------|-------------------|
-| PRD §11 `SessionProfile` | 논리 엔티티로 “익명 세션” 언급 | **영구 PG 테이블이 아님.** 요청·쿠키·단기 메모리上的 프로필 |
-| F-02 `session_id` | 출력에 session_id | **서버가 발급하는 익명 핸들**(쿠키/Redis TTL). 프로필 컬럼을 PG에 두지 않음 |
-| PUBLIC_API_PAGE_PLAN | birthDate 등 “보관” 표현 | **클라이언트/서명 쿠키에만.** PG 보관 금지로 수정 |
+| PRD §11 `UserProfile` | 비영속 논리 모델 | **영구 PG 테이블이 아님.** 브라우저 메모리/`sessionStorage`의 프로필 |
+| F-02 익명 키 | 선택적 세션 연결 | **서버가 발급하는 불투명 핸들**만 쿠키에 허용. 프로필 인코딩·PG 컬럼 금지 |
+| PUBLIC_API_PAGE_PLAN | birthDate 전달 | **POST JSON 요청에서 계산 후 폐기.** URL·PG 보관 금지 |
 
 **PostgreSQL에 넣어도 되는 것**
 
 - 공공 OpenAPI 캐시 (`stats_*`, sync, heads) — 개인 아님  
 - (선택) PDF job·마스킹 JSON — 증권 내용, 프로필 아님  
 - (선택) AI 리포트 본문 — 통계 요약 기반, **생년월일 원문 금지**  
-- 상담 요청 — **동의 후에만** 연락처  
+- 상담 요청 — **동의 후에만** 연락처·선택 메모 암호화
 
 **PostgreSQL에 넣지 않는 것**
 
-- 생년월일 / 주민번호 앞자리  
-- 성별, 지역, 직업, 유병력  
+- 생년월일, 성별, 지역
+- 직업·유병력은 P0에서 아예 수집하지 않음
 - 보험나이·연령대 (매 요청 `asOfDate`로 계산)
 
 ### 0.3 런타임 모델 (프로필)
 
 ```text
 [브라우저]
-  입력 → 메모리/sessionStorage 또는 서명된 쿠키(암호화 권장)
-        ↓ 매 API 요청에 프로필 전달 (또는 쿠키 복호화)
+  입력 → 메모리/sessionStorage
+        ↓ POST JSON으로 프로필 전달 (URL query 금지)
 [FastAPI]
-  birth_date + asOfDate → insuranceAge → API 어댑터
+  birth_date + asOfDate → insuranceAge → API 어댑터 → birth_date 폐기
         ↓
   PG: public_cache_heads → stats_* 만 조회
         ↓
   응답 후 서버는 프로필을 PG에 INSERT 하지 않음
 ```
 
-선택: Redis에 `anon_session:{id}` TTL 30분 — **만료 삭제**, 백업·분석용 PG 이관 금지.  
-MVP는 **쿠키/클라이언트만**으로도 충분.
+P0는 브라우저 메모리/`sessionStorage`만 사용한다. Redis 프로필 캐시는 범위 밖이며, 추후 도입 시 별도 개인정보 검토·짧은 TTL·만료 삭제가 필요하다.
 
 ---
 
-## 1. 논리 개요 (v1.4)
+## 1. 논리 개요 (v1.5)
 
 ```text
-【비영속】 UserProfile (클라이언트/쿠키/Redis TTL)
-          birth_date, sex, area_nm, job?, health?
-                 │ 요청마다 전달 · PG 미저장
+【비영속】 UserProfile (브라우저 메모리/sessionStorage)
+          birth_date, sex, area_nm
+                 │ POST JSON 요청마다 전달 · 계산 후 폐기 · PG 미저장
                  ▼
 【PostgreSQL】
-  public_cache_heads → public_sync_runs → stats_medical | stats_auto | stats_life
+  public_cache_heads → public_sync_runs
+                     → stats_medical_rates | stats_auto_contracts | stats_life_join_status
 
-  uploaded_documents ── masked_coverages     (선택 PDF, anon_session_key만)
-  ai_reports                                 (scope, 통계 요약 JSON · 생년월일 없음)
-  consultation_requests                      (동의 후 연락처만)
+  uploaded_documents ── masked_coverages     (선택 PDF, anon_session_key_hash만)
+  ai_reports                                 (scope, 통계 요약 JSON · 원문 토큰 없음)
+  consultation_requests                      (동의 후 연락처·메모 암호화)
 ```
 
 | PRD 개념 | 구현 |
 |----------|------|
-| SessionProfile | **PG 테이블 삭제.** 요청 컨텍스트 / 쿠키 |
+| SessionProfile | **PG 테이블 삭제.** 브라우저 메모리/`sessionStorage`; 쿠키에는 불투명 익명 키만 |
 | PublicStatsCache | `public_cache_heads` + `public_sync_runs` + `stats_*` |
 | UploadedDocument / MaskedCoverage / AiReport / Consultation | PG (아래). 프로필 FK 없음 |
 
@@ -139,7 +139,7 @@ erDiagram
 
     UPLOADED_DOCUMENTS {
         uuid id PK
-        string anon_session_key "opaque, no PII"
+        bytes anon_session_key_hash "HMAC, no PII"
         string job_id UK
         string status
         timestamptz created_at
@@ -155,11 +155,11 @@ erDiagram
 
     AI_REPORTS {
         uuid id PK
-        string anon_session_key
+        bytes anon_session_key_hash
         uuid document_id FK
         string scope
-        string access_token UK
-        jsonb input_summary "stats only, no birth_date"
+        bytes access_token_hash UK
+        jsonb input_summary "displayed stats only, no profile"
         text body_markdown
         boolean is_fallback
         timestamptz created_at
@@ -170,11 +170,14 @@ erDiagram
         uuid id PK
         boolean consent_agreed
         timestamptz consented_at
+        string consent_notice_version
         bytea contact_encrypted
         string contact_channel
-        string purpose_note
-        string anon_session_key "optional link only"
+        bytes purpose_note_encrypted
+        string encryption_key_version
+        bytes anon_session_key_hash "optional HMAC link only"
         timestamptz created_at
+        timestamptz expires_at
     }
 ```
 
@@ -193,14 +196,17 @@ erDiagram
 
 **없음:** `session_profiles`, 프로필 → 통계 FK, 생년월일 컬럼.
 
-`anon_session_key`: 랜덤 UUID/토큰. **안에 나이·성별 인코딩 금지.**
+익명 세션 원문 토큰은 32바이트 이상 난수이며 **안에 나이·성별을 인코딩하지 않는다.** `Secure`·`HttpOnly`·`SameSite=Lax` 쿠키에만 두고 PostgreSQL에는 `HMAC-SHA-256(SESSION_TOKEN_PEPPER, token)`인 `anon_session_key_hash`만 저장한다.
+리포트 접근 토큰은 32바이트 이상 난수로 발급해 응답에서 한 번만 제공한다. URL·브라우저 저장소에 넣지 않고 조회 요청의 `Authorization` 헤더로만 받는다. PostgreSQL에는 서버 측 pepper를 키로 한 HMAC-SHA-256만 저장하고 조회 시 상수 시간 비교를 사용한다.
+업로드 원본 파일명은 개인정보를 포함할 수 있으므로 저장하지 않는다.
+`expires_at`은 애플리케이션 설정으로 생성하고 주기 작업이 관련 행을 hard delete한다. MVP 기본은 문서·마스킹 결과 24시간, AI 리포트 7일, 상담 요청 30일이며 공개 전 실제 처리 목적과 법률 검토에 맞춰 확정하고 동의문과 함께 변경한다.
 
 ---
 
 ## 4. PostgreSQL DDL (프로필 테이블 없음)
 
 ```sql
--- MVP schema v1.4 — 사용자 입력은 PG에 저장하지 않음
+-- MVP schema v1.5 — 사용자 입력·원문 토큰·원본 파일명은 PG에 저장하지 않음
 
 CREATE TABLE public_sync_runs (
   id            UUID PRIMARY KEY,
@@ -210,7 +216,8 @@ CREATE TABLE public_sync_runs (
   row_count     INT,
   started_at    TIMESTAMPTZ NOT NULL,
   finished_at   TIMESTAMPTZ,
-  error_message TEXT
+  error_code              VARCHAR(64),
+  error_message_sanitized TEXT  -- serviceKey, URL query, 응답 원문 금지
 );
 
 CREATE TABLE public_cache_heads (
@@ -272,20 +279,20 @@ CREATE TABLE stats_life_join_status (
 -- 선택 경로: PDF / AI (프로필 컬럼 없음)
 CREATE TABLE uploaded_documents (
   id                 UUID PRIMARY KEY,
-  anon_session_key   VARCHAR(64) NOT NULL,
+  anon_session_key_hash BYTEA NOT NULL
+                        CHECK (octet_length(anon_session_key_hash) = 32),
   job_id             VARCHAR(64) NOT NULL UNIQUE,
   status             VARCHAR(32) NOT NULL,
-  original_filename  VARCHAR(255),
   byte_size          INT,
   page_count         INT,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-  expires_at         TIMESTAMPTZ,
-  fail_reason        TEXT
+  expires_at         TIMESTAMPTZ NOT NULL,
+  fail_code          VARCHAR(64)
 );
 
 CREATE TABLE masked_coverages (
   id               UUID PRIMARY KEY,
-  document_id      UUID NOT NULL UNIQUE REFERENCES uploaded_documents(id),
+  document_id      UUID NOT NULL UNIQUE REFERENCES uploaded_documents(id) ON DELETE CASCADE,
   coverage_json    JSONB NOT NULL,
   preview_masked   TEXT,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -293,28 +300,45 @@ CREATE TABLE masked_coverages (
 
 CREATE TABLE ai_reports (
   id                UUID PRIMARY KEY,
-  anon_session_key  VARCHAR(64) NOT NULL,
-  document_id       UUID REFERENCES uploaded_documents(id),
+  anon_session_key_hash BYTEA NOT NULL
+                        CHECK (octet_length(anon_session_key_hash) = 32),
+  document_id       UUID REFERENCES uploaded_documents(id) ON DELETE SET NULL,
   scope             VARCHAR(16) NOT NULL CHECK (scope IN ('health', 'auto', 'life')),
-  access_token      VARCHAR(64) NOT NULL UNIQUE,
-  input_summary     JSONB NOT NULL,  -- 통계 숫자만. birth_date/sex 원문 넣지 말 것
+  access_token_hash BYTEA NOT NULL UNIQUE
+                    CHECK (octet_length(access_token_hash) = 32),
+  input_summary     JSONB NOT NULL,  -- 화면 표시 통계만. 세션 프로필 넣지 말 것
   body_markdown     TEXT NOT NULL,
   is_fallback       BOOLEAN NOT NULL DEFAULT FALSE,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  expires_at        TIMESTAMPTZ
+  expires_at        TIMESTAMPTZ NOT NULL
 );
 
 -- 유일한 "사용자 연락" 영속: 동의 후
 CREATE TABLE consultation_requests (
   id                  UUID PRIMARY KEY,
-  consent_agreed      BOOLEAN NOT NULL,
+  consent_agreed      BOOLEAN NOT NULL CHECK (consent_agreed),
   consented_at        TIMESTAMPTZ NOT NULL,
+  consent_notice_version VARCHAR(32) NOT NULL,
+  -- AES-256-GCM: nonce||ciphertext||tag 를 한 BYTEA에 저장 (별도 nonce 컬럼 없음)
   contact_encrypted   BYTEA NOT NULL,
-  contact_channel     VARCHAR(16) NOT NULL,
-  purpose_note        VARCHAR(500),
-  anon_session_key    VARCHAR(64),
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+  contact_channel     VARCHAR(16) NOT NULL
+                      CHECK (contact_channel IN ('phone', 'email')),
+  purpose_note_encrypted BYTEA,  -- 동일 포맷, 미입력 시 NULL
+  encryption_key_version VARCHAR(32) NOT NULL,
+  anon_session_key_hash BYTEA
+                        CHECK (anon_session_key_hash IS NULL OR octet_length(anon_session_key_hash) = 32),
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at          TIMESTAMPTZ NOT NULL
 );
+
+CREATE INDEX ix_uploaded_documents_session_job
+  ON uploaded_documents (anon_session_key_hash, job_id);
+CREATE INDEX ix_uploaded_documents_expires_at
+  ON uploaded_documents (expires_at);
+CREATE INDEX ix_ai_reports_expires_at
+  ON ai_reports (expires_at);
+CREATE INDEX ix_consultation_requests_expires_at
+  ON consultation_requests (expires_at);
 ```
 
 ---
@@ -323,9 +347,10 @@ CREATE TABLE consultation_requests (
 
 | 엔드포인트 | 프로필 | PG |
 |------------|--------|-----|
-| `GET /stats/*` | 요청 body/쿼리 또는 쿠키에서 읽어 보험나이 계산 | `stats_*`만 SELECT |
-| `POST /reports` | 통계 요약만 LLM에. 생년월일 전달 금지 | `ai_reports` (요약 JSON) |
-| `POST /consultations` | 동의+연락처 | `consultation_requests` INSERT |
+| `POST /stats/*` | JSON body에서 읽어 보험나이 계산 후 생년월일 폐기 | `stats_*`만 SELECT |
+| `POST /reports` | 통계 요약만 LLM에. 생년월일 전달 금지. `report_id`와 토큰을 한 번 반환 | `ai_reports` (요약 JSON) |
+| `GET /reports/{report_id}` | 토큰은 URL이 아닌 `Authorization` 헤더로 전달 | HMAC 조회·상수 시간 검증, `Cache-Control: no-store` |
+| `POST /consultations` | 목적·항목·보유기간·거부권 고지에 동의한 뒤 **이메일**(P0 `contact_channel=email`)·선택 메모 | AES-256-GCM(AEAD) 암호화 후 만료시각과 함께 INSERT · 운영 알림 메일 |
 
 ---
 
@@ -335,6 +360,7 @@ CREATE TABLE consultation_requests (
 |------|------|
 | 1.3 | 파생 나이 컬럼 제거, cache_heads |
 | **1.4** | **`session_profiles` PG 제거.** 사용자 입력 비영속 원칙 복원 |
+| **1.5** | 원본 파일명 제거, 접근 토큰 HMAC, 오류 로그 정제, 상담 메모 암호화, 동의 버전·만료 삭제 필드 |
 
 ---
 

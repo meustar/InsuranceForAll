@@ -1,8 +1,8 @@
 # Flowchart
 
 **프로젝트:** 모두의 보험 (Insurance For All)  
-**버전:** 2026-08-21 (MVP 1.2 여정)  
-**관련:** [PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md)
+**버전:** 2026-08-24 (MVP 1.4 — Tab 허브 여정 · 차트 유형)
+**관련:** [PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [ENVIRONMENT.md](./ENVIRONMENT.md)
 
 - **1장:** P0 필수  
 - **2장:** P1/P2 전체 (데모 범위 아님)
@@ -18,44 +18,69 @@
 flowchart TD
   START[서비스 접속]
 
-  MAIN["F-01+F-02 메인<br/>소개·고지 + 생년월일·성별·지역<br/>프로필 PG 미저장"]
+  MAIN["F-01+F-02 메인 /<br/>소개·고지 + 생년월일·성별·지역<br/>프로필 PG 미저장"]
   VALID{"필수 입력 OK?"}
   ERR[입력 오류 안내]
 
-  AGE["보험나이 산정<br/>asOfDate + 어댑터"]
+  HUB["F-03 통계 허브 /stats<br/>탭 메뉴 + 스코프 요약 카드<br/>PDF·상담 진입(선택)"]
 
-  H["F-03 실손 /stats/health<br/>캐시·막대·출처"]
+  H["실손 탭 /stats/health<br/>캐시·D3 가로막대·덤벨·출처"]
   HAI["F-07 AI scope=health"]
-  HC{"다음?"}
-
-  A["F-03 자동차 /stats/auto"]
+  HCTA["선택 CTA<br/>PDF · 이메일 상담"]
+  A["자동차 탭 /stats/auto"]
   AAI["F-07 AI scope=auto"]
-  AC{"다음?"}
-
-  L["F-03 생명 /stats/life"]
+  ACTA["선택 CTA"]
+  L["생명 탭 /stats/life"]
   LAI["F-07 AI scope=life"]
+  LCTA["선택 CTA"]
 
-  PDF{"PDF 업로드? 선택"}
+  BACK["「이전」→ /stats 허브"]
+
+  DOCPAGE["/documents<br/>F-05 PDF 업로드"]
   F05["F-05 documents 202+job"]
   F06["F-06 마스킹 JSONB"]
-  ASK{"상담?"}
+  CONPAGE["/consultations<br/>F-08 이메일 상담"]
+  F08["동의 + 이메일 암호화<br/>설계사 알림"]
   END1[종료 · 연락처 없음]
-  F08["F-08 동의+연락처"]
   DONE[접수]
 
   START --> MAIN --> VALID
   VALID -->|아니오| ERR --> MAIN
-  VALID -->|예| AGE --> H --> HAI --> HC
-  HC -->|자동차| A --> AAI --> AC
-  HC -->|건너뛰고 상담/종료| ASK
-  AC -->|생명| L --> LAI --> PDF
-  AC -->|건너뛰기| PDF
-  LAI --> PDF
-  PDF -->|안 함| ASK
-  PDF -->|함| F05 --> F06 --> ASK
-  ASK -->|아니오| END1
-  ASK -->|예| F08 --> DONE
+  VALID -->|예| HUB
+
+  HUB -->|실손 선택| H --> HAI --> HCTA
+  HUB -->|자동차 선택| A --> AAI --> ACTA
+  HUB -->|생명 선택| L --> LAI --> LCTA
+  HCTA --> BACK
+  ACTA --> BACK
+  LCTA --> BACK
+  BACK --> HUB
+
+  HUB -->|상단 탭| H
+  HUB -->|상단 탭| A
+  HUB -->|상단 탭| L
+
+  HCTA -->|PDF| DOCPAGE --> F05 --> F06 --> BACK
+  ACTA -->|PDF| DOCPAGE
+  LCTA -->|PDF| DOCPAGE
+
+  HCTA -->|상담| CONPAGE
+  ACTA -->|상담| CONPAGE
+  LCTA -->|상담| CONPAGE
+  HCTA -->|건너뛰기| BACK
+  CONPAGE -->|동의+제출| F08 --> DONE
+  CONPAGE -->|취소/복귀| BACK
+  HUB -->|종료| END1
 ```
+
+규칙 요약:
+
+- 입력 완료 후 **항상 허브** 랜딩. 스코프 순서 강제 없음.
+- 상단 탭은 **허브 진입 후**(세션 프로필 있음)만 활성.
+- 스코프 화면 **「이전」** = `/stats` 허브.
+- 허브에 P0 AI 필수 아님. AI는 각 스코프 탭 하단만.
+- **스코프 하단(AI 아래)** PDF·이메일 상담 CTA → `/documents`, `/consultations` 전용 페이지.
+- P0 상담 UI는 **이메일만**. 통계 탐색 중 연락처 수집 없음.
 
 ### 1-2. P0 시스템
 
@@ -66,7 +91,7 @@ flowchart LR
     PORTAL[OpenAPI 3종]
     RUNS[(public_sync_runs)]
     HEAD[(public_cache_heads)]
-    STATS[(stats_medical / auto / life)]
+    STATS[("stats_medical_rates<br/>stats_auto_contracts<br/>stats_life_join_status")]
     CRON --> PORTAL --> RUNS --> STATS
     RUNS -->|성공| HEAD
     PORTAL -->|실패| STALE[head 유지 + stale]
@@ -76,10 +101,13 @@ flowchart LR
   subgraph app["요청 경로"]
     WEB[Next.js]
     API[FastAPI]
-    COOKIE[프로필 쿠키 · PG 미저장]
-    WEB --> COOKIE --> API
+    SESSION["메모리/sessionStorage<br/>프로필 PG 미저장"]
+    D3["D3 Client chart<br/>toBarSeries / dumbbell"]
+    SESSION -->|프로필 읽기| WEB
+    WEB -->|"POST JSON<br/>URL query 금지"| API
     API --> HEAD
     API --> STATS
+    WEB --> D3
   end
 
   subgraph pdf["PDF"]
@@ -98,15 +126,26 @@ flowchart LR
 flowchart TD
   subgraph USER["사용자"]
     MAIN[메인 입력]
-    H[실손]
-    A[자동차]
-    L[생명]
+    HUB[통계 허브]
+    H[실손 탭]
+    A[자동차 탭]
+    L[생명 탭]
     PDF[PDF]
-    AI[페이지별 AI]
+    AI[스코프별 AI]
     F12["F-12 수정 P1"]
     F13["F-13 설계사 P2"]
     F08[상담]
-    MAIN --> H --> A --> L --> PDF --> AI --> F08
+    MAIN --> HUB
+    HUB --> H
+    HUB --> A
+    HUB --> L
+    H --> HUB
+    A --> HUB
+    L --> HUB
+    H -.-> AI
+    A -.-> AI
+    L -.-> AI
+    HUB --> PDF --> F08
     AI --> F12
     F08 --> F13
   end
@@ -128,12 +167,13 @@ flowchart TD
 
 | 화면 | MVP | 비고 |
 |------|-----|------|
-| 메인 (소개+입력) | F-01, F-02 | 생년월일·성별·지역 |
-| 실손 통계+비교+AI | F-03, F-04, F-07 | |
-| 자동차 통계+AI | F-03, F-07 | |
-| 생명 통계+AI | F-03, F-07 | |
-| PDF 진행 | F-05, F-06 | 선택 |
-| 상담 | F-08 | |
+| 메인 (소개+입력) | F-01, F-02 | `/` |
+| 통계 허브 | F-03 | `/stats` · 탭 선택·요약 |
+| 실손 탭+비교+AI | F-03, F-04, F-07 | `/stats/health` · D3 |
+| 자동차 탭+AI | F-03, F-07 | `/stats/auto` · D3 |
+| 생명 탭+AI | F-03, F-07 | `/stats/life` · D3 |
+| PDF 진행 | F-05, F-06 | 선택 · 허브/공통 하단 |
+| 상담 | F-08 | 선택 |
 | 관리자 | | P1 |
 
-v0: **JavaScript only**, Next App Router, Tailwind — [TECH_STACK.md](./TECH_STACK.md).
+v0: **JavaScript only**, Next App Router, Tailwind, **D3.js** — [TECH_STACK.md](./TECH_STACK.md).

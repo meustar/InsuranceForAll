@@ -1,0 +1,104 @@
+# =============================================================================
+# Insurance For All — Git ignore (SSOT: ENVIRONMENT.md §1, §5, §6)
+# =============================================================================
+# Commit only .env.example (names + non-secret defaults). Never commit .env,
+# secrets/, keys, runtime PII uploads, or local DB volumes.
+# Ref: GitHub secret scanning, Next.js env docs, Docker .dockerignore parity.
+
+# --- Secrets & environment (GitHub: do not commit credentials) ---
+.env
+.env.*
+.env.local
+.env.*.local
+*.env
+*.env.*
+!.env.example
+
+secrets/
+**/secrets/
+
+# Key material & credential bundles (OWASP Key Management)
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+credentials.json
+secrets.json
+**/credentials.json
+**/secrets.json
+
+# Local override files that often hold secrets
+docker-compose.override.yml
+docker-compose.*.local.yml
+*.local.yaml
+*.local.yml
+
+# --- Runtime data & PII-adjacent paths (ERD / AGENTS: uploads, logs, DB) ---
+data/
+logs/
+tmp/
+temp/
+uploads/
+postgres-data/
+redis-data/
+**/uploads/**
+**/postgres-data/**
+**/redis-data/**
+
+# --- JavaScript / Next.js (Next.js env: .env*.local never committed) ---
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+out/
+dist/
+build/
+coverage/
+.vercel/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+
+# --- Python / FastAPI / Celery ---
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+.venv/
+venv/
+.envrc
+
+# --- IDE & OS ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Optional local tooling (may contain tokens) ---
+.aws/
+.npmrc
+.netrc
+
+# --- Keep shared Cursor project rules tracked ---
+!.cursor/
+!.cursor/**

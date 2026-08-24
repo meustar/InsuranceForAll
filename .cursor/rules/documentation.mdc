@@ -1,0 +1,15 @@
+---
+description: 제품·기술 Markdown 문서의 일관성과 SSOT를 유지하는 규칙
+globs: **/*.md, **/*.mdc
+alwaysApply: false
+---
+
+# Documentation
+
+- 사실, 확정 결정, 제안, 미확정 항목을 구분하고 확인하지 않은 버전·명령·법적 결론을 단정하지 않는다.
+- 제품 범위는 `PRD.md`, 기능·UAT는 `FUNCTIONAL_SPEC.md`, 흐름은 `FLOWCHARTS.md`, 화면·공공 API 상세는 `PUBLIC_API_PAGE_PLAN.md`, 시각·공통 UX·Stitch 테마는 `DESIGN.md`, 물리 스키마는 `ERD.md`, 버전·인프라는 `TECH_STACK.md`, API 키·배포 비밀정보는 `ENVIRONMENT.md`에 기록한다.
+- 한 결정을 여러 문서에 전문 복사하지 말고 정본을 링크한다. 요약이 필요한 경우 정본 파일과 버전을 명시한다.
+- 사용자 흐름, API 계약, 스키마 또는 P0 범위 변경 시 영향을 받는 문서를 같은 변경에서 동기화한다.
+- 폐기된 `POST /profiles`, GET body/프로필 query, PostgreSQL 프로필 저장, P0 직업·유병력 수집, TypeScript 프론트, 관리자 P0 설계, **실손→자동차→생명 순서 강제·선형 스토리**, **Recharts/Chart.js(차트는 D3)** 를 되살리지 않는다.
+- 문서는 한국어를 기본으로 하고 코드 식별자, 경로, 명령은 원문 표기를 유지한다.
+- `AGENTS.md`에는 반복해서 필요한 저장소 지침만 둔다. 일회성 계획이나 쉽게 코드에서 확인되는 설명을 추가하지 않는다.

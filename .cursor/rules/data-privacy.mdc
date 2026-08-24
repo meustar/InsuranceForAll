@@ -1,0 +1,17 @@
+---
+description: 개인정보, 데이터베이스, AI 데이터 경계를 변경할 때 적용하는 규칙
+globs: **/*.sql, **/alembic/**, **/migrations/**, **/*model*.py, **/*schema*.py, **/*report*.py, **/*document*.py, **/*consultation*.py, docker-compose*.yml, docker-compose*.yaml, .env.example, .gitignore, .dockerignore, .cursorignore
+alwaysApply: false
+---
+
+# Data and Privacy Boundaries
+
+- 스키마 변경 전 `ERD.md`를 읽고, 개인 프로필 테이블이나 생년월일·성별·지역·직업·유병력·보험나이 컬럼을 추가하지 않는다.
+- 익명 세션 토큰은 32바이트 이상 무작위 불투명 값이어야 하며 PII나 파생 프로필을 인코딩하지 않는다. 원문은 쿠키에만 두고 DB에는 별도 pepper 기반 HMAC(`anon_session_key_hash`)만 저장한다.
+- PostgreSQL 저장 허용 범위는 공공 캐시, 만료시각이 있는 마스킹 PDF 산출물·통계 기반 AI 리포트, 목적·항목·보유기간·거부권 고지에 동의한 뒤 암호화한 상담 정보뿐이다.
+- Redis에 프로필을 둘 경우 짧은 TTL과 만료 삭제를 사용하고 PostgreSQL·백업·분석 저장소로 이관하지 않는다.
+- 로그, 추적, 에러 리포트, GA4에 원문 생년월일·연락처·PDF 내용·프롬프트·API 키·공공 API 전체 URL을 보내지 않는다.
+- 원본 파일명과 리포트 접근 토큰 원문을 저장하지 않는다. 접근 토큰은 URL·브라우저 저장소에 넣지 않고 서버 측 pepper를 키로 한 HMAC-SHA-256으로만 저장한다.
+- `.env.example`에는 변수 이름만 두며 실제 값·작동하는 예시 키를 넣지 않는다. `.env*`는 `.env.example`을 제외하고 Git·Docker build context에서 차단한다.
+- 새 마이그레이션에는 업그레이드와 안전한 롤백을 제공하고, 데이터 보존·삭제·암호화 영향을 테스트한다.
+- AI 입력 스키마는 허용 필드 목록 방식으로 화면에 표시된 집계 통계만 허용하고 생년월일·세션 프로필·원본 문서가 들어오면 거부한다.
