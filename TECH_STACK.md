@@ -260,7 +260,7 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 ```text
 Insurance_For_All/
   apps/web/              # Next.js 16, JavaScript (A-7+)
-  apps/api/              # FastAPI + Alembic ERD v1.5 (Dockerfile 예정)
+  apps/api/              # FastAPI + Alembic ERD v1.5 + F-11 `python -m app.jobs.sync_public_api`
   apps/worker/           # Celery (A-0 스켈레톤; Dockerfile 예정)
   infra/nginx/           # nginx.conf (예정)
   design/tokens.css      # Tailwind 4 @theme — DESIGN.md §2–§3 미러

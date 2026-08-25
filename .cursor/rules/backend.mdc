@@ -7,6 +7,7 @@ alwaysApply: false
 # Backend and Worker
 
 - FastAPI, Pydantic v2, SQLAlchemy 2 async 스타일과 실제 프로젝트 구조를 따른다.
+- 새로 만들거나 의미 있게 고치는 클래스·함수·Celery task에는 역할·경계를 한국어 1~3줄 docstring으로 선언 바로 아래에 적는다. 공개 모듈 파일만 최상단에 1~3줄을 허용한다. 자명한 one-liner, 테스트 헬퍼, Alembic revision 콜백, 단순 getter는 생략. 주석에 비밀·개인정보를 넣지 않는다. 기존 파일 일괄 주석 추가는 하지 않는다.
 - HTTP·작업 큐 경계에서 입력을 검증하고 구조화된 오류를 반환한다. 예외를 삼키거나 민감한 요청 본문을 로그에 남기지 않는다.
 - 개인화 통계는 `POST /api/v1/stats/{scope}`의 검증된 JSON 본문으로 받고 보험나이 계산 뒤 생년월일을 폐기한다. GET body와 프로필 query parameter를 만들지 않는다.
 - 보험나이는 요청 시점의 `Asia/Seoul` 기준일로 매번 계산하고, 실손 `age`·자동차 `aggr`·생명 `rchnAggr`로 어댑트한다.

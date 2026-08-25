@@ -2,7 +2,7 @@
 
 **공식 프로젝트 루트:** 이 저장소의 최상위 디렉터리(`Insurance_For_All`)
 
-**문서 버전:** MVP 1.4 (2026-08-24)
+**문서 버전:** MVP 1.4 (2026-08-24)  
 **데모 마감:** 2026-08-27
 
 ---
@@ -11,6 +11,7 @@
 
 | 순서 | 파일 | 역할 |
 |------|------|------|
+| — | [PROGRESS.md](./PROGRESS.md) | 기획~A-1 공유 브리핑 (계약 정본 아님) |
 | 1 | [PRD.md](./PRD.md) | 제품 정의·목표·비영속·여정 |
 | 2 | [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) | F-ID · API · UAT |
 | 3 | [FLOWCHARTS.md](./FLOWCHARTS.md) | P0 흐름 |
@@ -53,7 +54,7 @@ Cursor가 비밀파일을 AI 컨텍스트에서 제외하도록 [ENVIRONMENT.md]
 
 ## Coding Agent 설정
 
-- [AGENTS.md](./AGENTS.md): Cursor·Codex 공통 프로젝트 지침 SSOT
+- [AGENTS.md](./AGENTS.md): Cursor·Codex 공통 프로젝트 지침 SSOT (신규·변경 코드의 함수·클래스 주석 1~3줄 포함)
 - [CLAUDE.md](./CLAUDE.md): Claude Code가 `AGENTS.md`를 불러오는 진입점
 - `.cursor/rules/*.mdc`: 프론트·백엔드·데이터·문서 작업에만 조건부 적용되는 세부 규칙
 - `.cursor/agents/verifier.md`: 구현 결과를 읽기 전용으로 독립 검증하는 Cursor 서브에이전트

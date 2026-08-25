@@ -185,7 +185,8 @@
 
 ## 14. 마감까지 남은 작업 (참고 · 2026-08-25 기준)
 
-**현재:** 문서 SSOT·Stitch 프로토타입·`design/tokens.css`까지 확정. **`apps/*` 코드·Compose·EC2 배포는 미구현.**  
+**현재:** 문서 SSOT·Stitch·`design/tokens.css` 확정. **A-0**(로컬 Compose + api health + worker 스켈레톤), **A-1**(ERD v1.5 Alembic, 프로필 테이블 없음)까지 구현. 공유용 요약은 [PROGRESS.md](./PROGRESS.md).  
+**아직:** A-2 이후(F-11 sync, stats/AI/PDF/상담 API, Next.js·D3, EC2).  
 **데모 목표:** 2026-08-27 (P0 UAT §6)
 
 | 단계 | 내용 |
