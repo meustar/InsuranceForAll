@@ -1,0 +1,94 @@
+# Local development (TRACK A-0). Do not bake secrets into images.
+# Copy .env.example → .env and fill values locally. Never commit .env.
+# web / nginx are deferred until A-7.
+
+name: insurance-for-all
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./apps/api:/app
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+    command:
+      - sh
+      - -c
+      - pip install --no-cache-dir -r requirements.txt && exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+
+  worker:
+    image: python:3.12-slim
+    working_dir: /opt/worker
+    volumes:
+      - ./apps/worker:/opt/worker
+      - ./apps/api:/opt/api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-1}
+      PYTHONPATH: /opt/api:/opt/worker
+      PYTHONUNBUFFERED: "1"
+    command:
+      - sh
+      - -c
+      - pip install --no-cache-dir -r requirements.txt && exec celery -A worker.app worker --loglevel=INFO --concurrency=${CELERY_CONCURRENCY:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

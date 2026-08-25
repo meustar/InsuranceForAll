@@ -99,7 +99,7 @@ OPENAI_MODEL=gpt-5.6-luna
 
 ## 5. Docker와 EC2
 
-로컬 개발에서는 Git에서 제외된 `.env`를 사용할 수 있다. 단, Dockerfile의 `COPY`·`ARG`·`ENV`로 키를 이미지에 굽지 않는다.
+로컬 개발에서는 Git에서 제외된 `.env`를 사용할 수 있다. 루트 `docker-compose.yml`은 `env_file: .env`로 api/worker에 주입하고, 컨테이너 안 `DATABASE_URL`/`REDIS_URL`만 `postgres`/`redis` 호스트로 덮어쓴다. Dockerfile의 `COPY`·`ARG`·`ENV`로 키를 이미지에 굽지 않는다.
 
 배포 환경에서는 평문 `.env`보다 다음 순서를 권장한다.
 

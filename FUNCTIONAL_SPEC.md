@@ -118,6 +118,7 @@ F-09~F-14 — 기존과 동일(관리자·HITL·OCR·설계사 디렉터리). MV
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
+| GET | `/health` | 프로세스 생존. `GET /api/health` 동일 응답. 비밀값 미포함 |
 | POST | `/api/v1/stats/health` | 실손 캐시. JSON body로 생년월일·성별 등을 **전달만** 하고 응답 후 폐기 |
 | POST | `/api/v1/stats/auto` | 자동차 캐시. 프로필·필터를 JSON body로 전달 |
 | POST | `/api/v1/stats/life` | 생명 캐시. 프로필·필터를 JSON body로 전달 |

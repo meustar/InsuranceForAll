@@ -259,13 +259,13 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 
 ```text
 Insurance_For_All/
-  apps/web/              # Next.js 16, JavaScript (+ Dockerfile 예정)
-  apps/api/              # FastAPI + Alembic (+ Dockerfile 예정)
-  apps/worker/           # Celery (+ Dockerfile 예정)
+  apps/web/              # Next.js 16, JavaScript (A-7+)
+  apps/api/              # FastAPI (A-0 health 스켈레톤; Alembic·Dockerfile 예정)
+  apps/worker/           # Celery (A-0 스켈레톤; Dockerfile 예정)
   infra/nginx/           # nginx.conf (예정)
   design/tokens.css      # Tailwind 4 @theme — DESIGN.md §2–§3 미러
   DESIGN.md
-  docker-compose.yml     # 로컬 (예정)
+  docker-compose.yml     # 로컬 postgres/redis/api/worker (web/nginx는 A-7+)
   docker-compose.prod.yml  # EC2 (예정)
   .env.example
   .gitignore
