@@ -8,7 +8,7 @@ from pydantic import SecretStr
 
 from app.jobs.mappers import map_auto, map_life, map_medical
 from app.jobs.portal_client import extract_items, fetch_all_items
-from app.jobs.sanitize import sanitize_text
+from app.jobs.sanitize import decoding_service_key, sanitize_text
 from app.jobs.sync_public_api import PublicSyncSettings, configure_sync_logging, sync_source
 from app.models import PublicSyncRun, StatsMedicalRate
 
@@ -19,6 +19,10 @@ def test_sanitize_redacts_key_and_url() -> None:
     assert "abc123" not in cleaned
     assert "https://" not in cleaned
     assert "servicekey=secret" not in sanitize_text("boom serviceKey=secret leftover").lower()
+
+
+def test_decoding_key_without_percent_is_unchanged() -> None:
+    assert decoding_service_key("placeholder-plus+slash/") == "placeholder-plus+slash/"
 
 
 def test_extract_items_single_and_list() -> None:
@@ -137,3 +141,41 @@ def test_sync_logging_omits_portal_url_and_service_key() -> None:
     assert "apis.data.go.kr" not in output
     assert "https://" not in output
     assert "sync source=medical" in output
+
+
+def test_decoding_key_is_unquoted_once_before_params() -> None:
+    captured: list[bytes] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(request.url.query)
+        return httpx.Response(
+            200,
+            json={
+                "response": {
+                    "header": {"resultCode": "00", "resultMsg": "NORMAL SERVICE."},
+                    "body": {"totalCount": 0, "items": {}},
+                }
+            },
+        )
+
+    encoded_placeholder = "placeholder%2Bnot-a-secret%3D"
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    fetch_all_items(client, url="https://example.test/getInsuranceInfo", service_key=encoded_placeholder)
+    client.close()
+    query = captured[0].decode()
+    assert "%252B" not in query
+    assert "serviceKey=" in query
+
+
+def test_dry_run_seed_does_not_write() -> None:
+    session = MagicMock()
+    status = sync_source(
+        session,
+        "medical",
+        seed=True,
+        settings=_settings_without_keys(),
+        dry_run=True,
+    )
+    assert status == "dry-run"
+    session.commit.assert_not_called()
+    session.add.assert_not_called()

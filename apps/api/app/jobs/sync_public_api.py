@@ -34,6 +34,7 @@ MAPPERS = {
 
 
 class PublicSyncSettings(BaseSettings):
+    """배치 전용 설정. OpenAI·SMTP는 읽지 않고 공공 키와 DB URL만 쓴다."""
     model_config = SettingsConfigDict(extra="ignore", env_file=None, case_sensitive=False)
 
     database_url: SecretStr
@@ -81,6 +82,7 @@ def _base_period(source: str, rows: list) -> str:
 
 
 def seed_rows(source: str, sync_run_id: uuid.UUID) -> list:
+    """포털 없이 UAT #8용 합성 캐시 행을 만든다. 실제 통계가 아니다."""
     now = datetime.now(timezone.utc)
     if source == "medical":
         return [
@@ -134,6 +136,7 @@ def seed_rows(source: str, sync_run_id: uuid.UUID) -> list:
 
 
 def _persist_success(session: Session, source: str, rows: list) -> int:
+    """stats_*를 완성한 뒤에만 head를 새 run으로 바꾼다. 같은 트랜잭션에서 커밋한다."""
     run_id = rows[0].sync_run_id
     run = PublicSyncRun(
         id=run_id,
@@ -167,6 +170,7 @@ def _persist_success(session: Session, source: str, rows: list) -> int:
 
 
 def _persist_failure(session: Session, source: str, error_code: str, message: str) -> None:
+    """실패한 run만 기록하고 이전 head는 유지한 채 stale로 표시한다."""
     session.add(
         PublicSyncRun(
             id=uuid.uuid4(),
@@ -194,7 +198,9 @@ def sync_source(
     seed: bool,
     settings: PublicSyncSettings,
     client: httpx.Client | None = None,
+    dry_run: bool = False,
 ) -> str:
+    """한 소스를 가져와 매핑한다. dry_run이면 PG에 쓰지 않는다."""
     run_id = uuid.uuid4()
     try:
         if seed:
@@ -214,20 +220,35 @@ def sync_source(
             rows = [row for item in items if (row := mapper(item, sync_run_id=run_id)) is not None]
             if not rows:
                 raise PortalError("empty_payload", "no mappable rows")
+        if dry_run:
+            logger.info("sync source=%s status=dry-run rows=%s", source, len(rows))
+            return "dry-run"
         count = _persist_success(session, source, rows)
         logger.info("sync source=%s status=success rows=%s", source, count)
         return "success"
     except PortalError as exc:
+        if dry_run:
+            logger.warning("sync source=%s status=dry-run-failed code=%s", source, exc.code)
+            return "failed"
         _persist_failure(session, source, exc.code, str(exc))
         logger.warning("sync source=%s status=failed code=%s", source, exc.code)
         return "failed"
     except Exception as exc:
+        if dry_run:
+            logger.warning("sync source=%s status=dry-run-failed code=sync_error", source)
+            return "failed"
         _persist_failure(session, source, "sync_error", sanitize_text(str(exc)))
         logger.warning("sync source=%s status=failed code=sync_error", source)
         return "failed"
 
 
-def run_all(*, seed: bool = False, sources: tuple[str, ...] = SOURCES) -> dict[str, str]:
+def run_all(
+    *,
+    seed: bool = False,
+    sources: tuple[str, ...] = SOURCES,
+    dry_run: bool = False,
+) -> dict[str, str]:
+    """세 소스를 순서대로 동기화한다. 한 소스 실패가 다음 소스를 막지 않는다."""
     configure_sync_logging()
     settings = get_sync_settings()
     engine = create_engine(sync_database_url(settings.database_url.get_secret_value()))
@@ -235,14 +256,26 @@ def run_all(*, seed: bool = False, sources: tuple[str, ...] = SOURCES) -> dict[s
     results: dict[str, str] = {}
     with factory() as session:
         for source in sources:
-            results[source] = sync_source(session, source, seed=seed, settings=settings)
+            results[source] = sync_source(
+                session,
+                source,
+                seed=seed,
+                settings=settings,
+                dry_run=dry_run,
+            )
     engine.dispose()
     return results
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI 진입점. --seed는 합성 캐시, --dry-run은 PG에 쓰지 않는다."""
     parser = argparse.ArgumentParser(description="F-11 public OpenAPI cache sync")
     parser.add_argument("--seed", action="store_true", help="Insert synthetic cache rows (no portal call)")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Fetch or seed without writing PostgreSQL",
+    )
     parser.add_argument(
         "--source",
         choices=[*SOURCES, "all"],
@@ -251,9 +284,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     configure_sync_logging()
     sources = SOURCES if args.source == "all" else (args.source,)
-    results = run_all(seed=args.seed, sources=sources)
+    results = run_all(seed=args.seed, sources=sources, dry_run=args.dry_run)
     logger.info("sync finished %s", results)
-    return 0 if all(status == "success" for status in results.values()) else 1
+    return 0 if all(status in {"success", "dry-run"} for status in results.values()) else 1
 
 
 if __name__ == "__main__":

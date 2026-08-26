@@ -1,3 +1,5 @@
+"""공공 OpenAPI 행을 ERD stats_* 컬럼으로 옮긴다. 필수 키가 없으면 행을 버린다."""
+
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
@@ -52,6 +54,7 @@ def _date(item: dict[str, Any], *keys: str) -> date | None:
 
 
 def map_medical(item: dict[str, Any], *, sync_run_id) -> StatsMedicalRate | None:
+    """실손 조회 행을 stats_medical_rates로 만든다. 기준일·연령이 없으면 건너뛴다."""
     bas_dt = _date(item, "basDt", "bas_dt")
     age = _int(item, "age")
     if bas_dt is None or age is None:
@@ -74,6 +77,7 @@ def map_medical(item: dict[str, Any], *, sync_run_id) -> StatsMedicalRate | None
 
 
 def map_auto(item: dict[str, Any], *, sync_run_id) -> StatsAutoContract | None:
+    """자동차 계약정보 행을 stats_auto_contracts로 만든다. 종목·성별·연령대가 없으면 건너뛴다."""
     ym = _text(item, "isuCmpyOfrYm", "isu_cmpy_ofr_ym")
     itms = _text(item, "isuItmsNm", "isu_itms_nm")
     sex_nm = _text(item, "sexNm", "sex_nm")
@@ -97,6 +101,7 @@ def map_auto(item: dict[str, Any], *, sync_run_id) -> StatsAutoContract | None:
 
 
 def map_life(item: dict[str, Any], *, sync_run_id) -> StatsLifeJoinStatus | None:
+    """생명 가입현황 행을 stats_life_join_status로 만든다. 개인연금 오퍼레이션은 호출하지 않는다."""
     year = _text(item, "sttsAccmlTrgtYr", "stts_accml_trgt_yr")
     area_nm = _text(item, "areaNm", "area_nm")
     sex_nm = _text(item, "sexNm", "sex_nm")

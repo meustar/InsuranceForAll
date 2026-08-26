@@ -132,7 +132,7 @@ F-09~F-14 — 기존과 동일(관리자·HITL·OCR·설계사 디렉터리). MV
 - GET body와 생년월일의 URL query 전달을 금지한다. 애플리케이션 API 키도 URL에 넣지 않되, 공공데이터포털 규격상 필요한 `serviceKey` query는 backend/worker 배치 어댑터에서만 만들고 로그·오류에서 전체 URL을 제거한다.
 - 리포트 접근 토큰은 URL에 넣지 않고 `Authorization` 헤더로만 전달한다. 요청·응답 본문과 인증 헤더를 로그에 남기지 않으며 응답은 `Cache-Control: no-store`로 반환한다.
 - 익명 세션 토큰은 32바이트 이상 난수로 `Secure`·`HttpOnly`·`SameSite=Lax` 쿠키에만 발급하고 DB에는 별도 pepper 기반 HMAC만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 문서 상태에만 접근을 제한한다.
-- 동기화: `python -m app.jobs.sync_public_api` (관리자 HTTP는 P1)
+- 동기화: `python -m app.jobs.sync_public_api` (`--seed` 합성 캐시, `--dry-run` PG 미기록. 관리자 HTTP는 P1)
 
 ---
 

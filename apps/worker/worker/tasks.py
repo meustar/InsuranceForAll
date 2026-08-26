@@ -9,6 +9,7 @@ def ping() -> dict[str, str]:
 
 @app.task(name="worker.sync_public_api")
 def sync_public_api(seed: bool = False) -> dict[str, str]:
+    """api 패키지의 F-11 배치를 Celery에서 호출한다. OpenAI 키는 쓰지 않는다."""
     from app.jobs.sync_public_api import run_all
 
     return run_all(seed=seed)
