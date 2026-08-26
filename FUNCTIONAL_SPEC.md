@@ -134,7 +134,7 @@ F-09~F-14 — 기존과 동일(관리자·HITL·OCR·설계사 디렉터리). MV
 - `POST /api/v1/reports` JSON: `scope`(`health`\|`auto`\|`life`), `displayed_stats`(화면에 보여 준 집계만). 선택 `masked_coverage`. 생년월일·PDF 원문 키는 400. 응답은 `{report_id, access_token}` 한 번. DB에는 `HMAC-SHA-256(REPORT_TOKEN_PEPPER, token)`만 저장한다.
 - 리포트 접근 토큰은 URL에 넣지 않고 `Authorization` 헤더로만 전달한다. 요청·응답 본문과 인증 헤더를 로그에 남기지 않으며 응답은 `Cache-Control: no-store`로 반환한다. LLM 실패·금지 문구면 `is_fallback` 템플릿(UAT #6).
 - 익명 세션 토큰은 32바이트 이상 난수로 `Secure`·`HttpOnly`·`SameSite=Lax` 쿠키(`ifa_anon`)에만 발급한다. 통계 POST는 프로필·HMAC을 INSERT하지 않는다. HMAC-SHA-256(`SESSION_TOKEN_PEPPER`, token)은 이후 문서·리포트 행의 `anon_session_key_hash`에만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 산출물 접근에만 사용한다.
-- `POST /api/v1/documents` 는 PDF 매직·10MB 이하만 받아 `202`와 `job_id`를 반환한다. 원본 파일명은 저장하지 않고 스테이징 파일은 `{job_id}.pdf`다. Celery `worker.mask_document`가 마스킹 JSONB를 저장한 뒤 원본 파일을 삭제한다. `GET /api/v1/documents/{job_id}`는 익명 세션 HMAC이 같은 행만 반환한다. LLM·원문 전달 없음.
+- `POST /api/v1/consultations` 는 `consent_agreed=true`, 현재 `consent_notice_version`, `contact_channel=email`, 이메일, 선택 메모만 받는다. `phone`은 422. 연락처·메모는 AES-256-GCM(`nonce||ciphertext||tag`)으로 저장하고 만료 행은 INSERT 전에 삭제한다. 성공 시 운영 알림 메일에 신청자 이메일을 넣지 않는다. `GET /api/v1/consultations/notice`는 목적·항목·보유기간·거부권 문구만 반환한다.
 
 ---
 
