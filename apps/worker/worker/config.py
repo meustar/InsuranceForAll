@@ -28,6 +28,8 @@ class WorkerSettings(BaseSettings):
     data_go_kr_auto_api_key: SecretStr
     data_go_kr_life_api_key: SecretStr
 
+    document_staging_dir: str = "/var/ifa/staging"
+
 
 @lru_cache
 def get_settings() -> WorkerSettings:

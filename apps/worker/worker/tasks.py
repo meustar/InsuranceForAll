@@ -13,3 +13,11 @@ def sync_public_api(seed: bool = False) -> dict[str, str]:
     from app.jobs.sync_public_api import run_all
 
     return run_all(seed=seed)
+
+
+@app.task(name="worker.mask_document")
+def mask_document(job_id: str) -> dict[str, str]:
+    """업로드 PDF를 마스킹 JSON으로 바꾸고 원본 파일을 삭제한다. LLM은 호출하지 않는다."""
+    from worker.pdf_mask import run_mask
+
+    return run_mask(job_id)

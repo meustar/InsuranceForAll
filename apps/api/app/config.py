@@ -41,6 +41,7 @@ class ApiSettings(BaseSettings):
     smtp_from: str = ""
 
     session_cookie_secure: bool = False
+    document_staging_dir: str = "/var/ifa/staging"
 
 
 @lru_cache

@@ -19,3 +19,20 @@ def issue_session_token() -> str:
 def hmac_session_token(pepper: str, token: str) -> bytes:
     """문서·리포트 행에 둘 HMAC-SHA-256. 통계 POST에서는 INSERT하지 않는다."""
     return hmac.new(pepper.encode("utf-8"), token.encode("utf-8"), hashlib.sha256).digest()
+
+
+def bind_session_cookie(request, response, *, secure: bool, token: str | None = None) -> str:
+    """HMAC에 쓰는 쿠키 값과 Set-Cookie를 같게 맞춘다."""
+    if token is None:
+        existing = request.cookies.get(COOKIE_NAME)
+        token = existing if existing and len(existing.encode("utf-8")) >= 32 else issue_session_token()
+    response.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        max_age=COOKIE_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
+    return token
