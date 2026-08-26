@@ -2,6 +2,7 @@
   "name": "web",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "engines": {
     "node": ">=20.9.0 <25"
   },
@@ -9,7 +10,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/insurance-age.test.js lib/session-profile.test.js lib/copy.test.js"
   },
   "dependencies": {
     "next": "16.3.1",

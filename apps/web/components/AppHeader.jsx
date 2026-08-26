@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSessionProfile } from "./SessionProvider";
 
 const TABS = [
   { href: "/stats/health", label: "실손" },
@@ -10,11 +11,11 @@ const TABS = [
 ];
 
 /**
- * 전 화면 공통 상단바. 우측 계정 슬롯과 Sign In은 두지 않는다.
+ * 전 화면 공통 상단바. 세션 프로필이 있을 때만 스코프 탭을 연다.
  */
 export function AppHeader() {
   const pathname = usePathname();
-  const tabsEnabled = pathname !== "/";
+  const { hasSession } = useSessionProfile();
 
   return (
     <header className="h-16 shrink-0 border-b border-border bg-surface">
@@ -28,7 +29,7 @@ export function AppHeader() {
         <nav className="ml-8 flex gap-6" aria-label="통계 스코프">
           {TABS.map((tab) => {
             const active = pathname === tab.href;
-            if (!tabsEnabled) {
+            if (!hasSession) {
               return (
                 <span
                   key={tab.href}
