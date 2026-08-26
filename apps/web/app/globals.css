@@ -1,0 +1,16 @@
+@import "tailwindcss";
+@import "../../../design/tokens.css";
+
+/**
+ * 제품 기본은 Light Institutional Minimal. Stitch Dark 변형은 쓰지 않는다.
+ */
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--color-surface-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
