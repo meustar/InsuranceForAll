@@ -130,8 +130,9 @@ F-09~F-14 — 기존과 동일(관리자·HITL·OCR·설계사 디렉터리). MV
 
 - **제거/비권장:** `POST /api/v1/profiles`로 프로필을 PG에 쌓는 방식  
 - GET body와 생년월일의 URL query 전달을 금지한다. 애플리케이션 API 키도 URL에 넣지 않되, 공공데이터포털 규격상 필요한 `serviceKey` query는 backend/worker 배치 어댑터에서만 만들고 로그·오류에서 전체 URL을 제거한다.
+- 통계 `POST` JSON 공통: `birth_date`(또는 `birthDate`, `YYYY-MM-DD`), `sex`(`남자`\|`여자`), `area_nm`(또는 `areaNm`, 생명 17개 ENUM). 선택 필터는 스코프별(`ptrn`/`mog`, 자동차 종목·차종, 생명 `isu_kind_nm` 등). 응답은 `stale`·`stale_message`·`as_of_date`·`insurance_age`·어댑터 값·캐시 행을 포함하고 **생년월일 원문은 넣지 않는다.** `Cache-Control: no-store`.
 - 리포트 접근 토큰은 URL에 넣지 않고 `Authorization` 헤더로만 전달한다. 요청·응답 본문과 인증 헤더를 로그에 남기지 않으며 응답은 `Cache-Control: no-store`로 반환한다.
-- 익명 세션 토큰은 32바이트 이상 난수로 `Secure`·`HttpOnly`·`SameSite=Lax` 쿠키에만 발급하고 DB에는 별도 pepper 기반 HMAC만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 문서 상태에만 접근을 제한한다.
+- 익명 세션 토큰은 32바이트 이상 난수로 `Secure`·`HttpOnly`·`SameSite=Lax` 쿠키(`ifa_anon`)에만 발급한다. 통계 POST는 프로필·HMAC을 INSERT하지 않는다. HMAC-SHA-256(`SESSION_TOKEN_PEPPER`, token)은 이후 문서·리포트 행의 `anon_session_key_hash`에만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 산출물 접근에만 사용한다.
 - 동기화: `python -m app.jobs.sync_public_api` (`--seed` 합성 캐시, `--dry-run` PG 미기록. 관리자 HTTP는 P1)
 
 ---

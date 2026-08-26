@@ -1,6 +1,8 @@
 fastapi[standard]==0.141.1
 pydantic-settings==2.11.0
 sqlalchemy==2.0.43
+greenlet==3.2.4
+tzdata==2025.2
 alembic==1.16.4
 asyncpg==0.30.0
 psycopg[binary]==3.2.9
