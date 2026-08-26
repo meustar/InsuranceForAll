@@ -1,3 +1,5 @@
+"""Alembic이 ApiSettings의 DB URL로 ERD 모델 메타데이터에 연결한다."""
+
 from logging.config import fileConfig
 
 from alembic import context
@@ -17,6 +19,7 @@ config.set_main_option("sqlalchemy.url", _sync_url.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:
+    """연결 없이 URL만으로 마이그레이션 SQL을 생성한다."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -30,6 +33,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    """동기 엔진으로 DB에 붙여 upgrade/downgrade를 실행한다."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

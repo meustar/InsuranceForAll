@@ -1,3 +1,5 @@
+"""ERD v1.5 테이블 매핑. 세션 프로필·생년월일 원문은 두지 않는다."""
+
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
@@ -22,10 +24,12 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
-    pass
+    """SQLAlchemy 매핑 공통 베이스."""
 
 
 class PublicSyncRun(Base):
+    """공공 API 동기화 1회 실행. 실패 시에도 행을 남겨 이전 head를 유지한다."""
+
     __tablename__ = "public_sync_runs"
     __table_args__ = (
         CheckConstraint("source IN ('medical', 'auto', 'life')", name="ck_public_sync_runs_source"),
@@ -49,6 +53,8 @@ class PublicSyncRun(Base):
 
 
 class PublicCacheHead(Base):
+    """소스별 활성 캐시 포인터. 성공한 sync_run만 가리키고 실패 시 stale로 표시한다."""
+
     __tablename__ = "public_cache_heads"
     __table_args__ = (
         CheckConstraint("source IN ('medical', 'auto', 'life')", name="ck_public_cache_heads_source"),
@@ -71,6 +77,8 @@ class PublicCacheHead(Base):
 
 
 class StatsMedicalRate(Base):
+    """실손 상품·연령별 보험료 캐시. 화면 통계는 이 테이블만 조회한다."""
+
     __tablename__ = "stats_medical_rates"
     __table_args__ = (
         UniqueConstraint(
@@ -111,6 +119,8 @@ class StatsMedicalRate(Base):
 
 
 class StatsAutoContract(Base):
+    """자동차 계약 집계 캐시. 가입대수·경과보험료는 같은 행에 두되 차트는 분리한다."""
+
     __tablename__ = "stats_auto_contracts"
     __table_args__ = (
         UniqueConstraint(
@@ -151,6 +161,8 @@ class StatsAutoContract(Base):
 
 
 class StatsLifeJoinStatus(Base):
+    """생명 가입현황 캐시. 건수는 명이 아니며 개인연금 오퍼레이션은 넣지 않는다."""
+
     __tablename__ = "stats_life_join_status"
     __table_args__ = (
         UniqueConstraint(
@@ -187,6 +199,8 @@ class StatsLifeJoinStatus(Base):
 
 
 class UploadedDocument(Base):
+    """PDF 업로드 job. 원본 파일명 없이 세션 HMAC과 만료시각만 둔다."""
+
     __tablename__ = "uploaded_documents"
     __table_args__ = (
         CheckConstraint(
@@ -219,6 +233,8 @@ class UploadedDocument(Base):
 
 
 class MaskedCoverage(Base):
+    """마스킹된 담보 JSON. 문서당 하나이며 원본 삭제 후 이 행만 남긴다."""
+
     __tablename__ = "masked_coverages"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
@@ -240,6 +256,8 @@ class MaskedCoverage(Base):
 
 
 class AiReport(Base):
+    """스코프별 AI 설명. 접근 토큰 원문 없이 HMAC만 저장하고 입력은 화면 통계 JSON이다."""
+
     __tablename__ = "ai_reports"
     __table_args__ = (
         CheckConstraint("scope IN ('health', 'auto', 'life')", name="ck_ai_reports_scope"),
@@ -276,6 +294,8 @@ class AiReport(Base):
 
 
 class ConsultationRequest(Base):
+    """동의 후 상담 요청. 연락처·메모는 암호문이며 P0 채널은 이메일이다."""
+
     __tablename__ = "consultation_requests"
     __table_args__ = (
         CheckConstraint("consent_agreed", name="ck_consultation_requests_consent_agreed"),

@@ -1,3 +1,5 @@
+"""Celery 앱. Redis 브로커와 concurrency=1을 worker 설정에서 읽는다."""
+
 from celery import Celery
 
 from worker.config import get_settings

@@ -3,6 +3,7 @@ from worker.app import app
 
 @app.task(name="worker.ping")
 def ping() -> dict[str, str]:
+    """워커 프로세스가 큐를 소비하는지 확인하는 생존 태스크."""
     return {"status": "ok"}
 
 

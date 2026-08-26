@@ -1,3 +1,5 @@
+"""Celery worker 환경변수. OpenAI·SMTP 키는 로드하지 않는다."""
+
 from functools import lru_cache
 
 from pydantic import SecretStr
@@ -5,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class WorkerSettings(BaseSettings):
-    """Worker process settings. OpenAI/SMTP keys are not loaded here."""
+    """배치·브로커 설정. 공공 API 키와 DB/Redis만 두고 값은 로그하지 않는다."""
 
     model_config = SettingsConfigDict(
         extra="ignore",
@@ -29,4 +31,5 @@ class WorkerSettings(BaseSettings):
 
 @lru_cache
 def get_settings() -> WorkerSettings:
+    """프로세스당 한 번 환경변수를 읽어 WorkerSettings를 캐시한다."""
     return WorkerSettings()

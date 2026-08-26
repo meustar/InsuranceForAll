@@ -1,3 +1,5 @@
+"""API 프로세스 환경변수. worker 전용 키는 이 모델에 두지 않는다."""
+
 from functools import lru_cache
 
 from pydantic import Field, SecretStr
@@ -5,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ApiSettings(BaseSettings):
-    """API process settings. Secrets have no defaults; extra env vars are ignored."""
+    """HTTP API가 읽는 설정. 필수 비밀은 기본값 없이 기동을 실패시키고 값은 로그하지 않는다."""
 
     model_config = SettingsConfigDict(
         extra="ignore",
@@ -43,4 +45,5 @@ class ApiSettings(BaseSettings):
 
 @lru_cache
 def get_settings() -> ApiSettings:
+    """프로세스당 한 번 환경변수를 읽어 ApiSettings를 캐시한다."""
     return ApiSettings()
