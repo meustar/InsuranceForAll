@@ -193,7 +193,7 @@
 | 단계 | 내용 |
 |------|------|
 | A. 로컬 구현 | Compose + api/worker/web · ERD migration · F-11 sync · stats/AI/PDF/상담 API · 7화면 + D3 |
-| B. EC2 배포 | t4g.medium · Ubuntu 26.04 · Docker · nginx 443 SSL · `docker-compose.prod.yml` 3-Tier network |
+| B. EC2 배포 | t4g.small · Ubuntu 24.04 LTS · Docker · nginx 443 SSL · `docker-compose.prod.yml` 3-Tier network |
 
 과거 8/21~8/24 일정은 **문서·Stitch 확정**까지 반영됨. 상세 기술 순서는 [TECH_STACK.md](./TECH_STACK.md) §5·§8.
 

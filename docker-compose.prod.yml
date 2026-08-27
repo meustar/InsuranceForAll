@@ -1,13 +1,28 @@
 # B-2: nginx :80 → web:3000, /api → api:8000. TLS is B-5.
+# EC2 기본 가정: t4g.small 2GiB. mem_limit은 컨테이너 RSS 상한이며 호스트 swap 1GiB와 별개다.
+# 이미지는 공식 멀티아키. platform: linux/amd64 를 넣지 않는다.
 # EC2 demo: pass a repository-external file with --env-file. Compose injects only listed names.
 # postgres and redis must not publish host ports (TECH_STACK §5.1).
 # After up: alembic upgrade head, then one public sync (TECH_STACK §5.1). Do not change default commands.
+# worker는 상시 1. scale 0으로 두지 않는다. FastAPI 동기 마스킹과 합치지 않는다.
 
 name: insurance-for-all-prod
 
 services:
   postgres:
     image: postgres:17.11-alpine
+    # 2GiB 호스트에서 기본 shared_buffers를 줄인다. 공공 캐시 전용이며 프로필 테이블은 없다.
+    command:
+      [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "max_connections=50",
+        "-c",
+        "work_mem=4MB",
+      ]
+    mem_limit: 256m
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -25,6 +40,7 @@ services:
 
   redis:
     image: redis:7.4-alpine
+    mem_limit: 64m
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -38,6 +54,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    mem_limit: 256m
     environment:
       APP_ENV: ${APP_ENV:-production}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -89,6 +106,7 @@ services:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
+    mem_limit: 320m
     environment:
       APP_ENV: ${APP_ENV:-production}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -115,9 +133,11 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+    mem_limit: 384m
     environment:
       API_INTERNAL_URL: http://api:8000
       NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
     depends_on:
       api:
         condition: service_healthy
@@ -127,6 +147,7 @@ services:
 
   nginx:
     image: nginx:1.30.4-alpine
+    mem_limit: 64m
     volumes:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:

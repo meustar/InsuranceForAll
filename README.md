@@ -61,7 +61,7 @@ Copy-Item .env.example .env
 git check-ignore -v .env
 ```
 
-실제 공공데이터포털 키 3개와 OpenAI 키는 로컬 `.env`에만 입력한다. `NEXT_PUBLIC_` 접두사, 코드, Notion, GitHub 커밋에는 키를 넣지 않는다. GitHub Actions는 같은 이름의 Repository/Environment Secret을 사용한다. 이번 EC2 데모는 저장소 밖 환경 파일을 `--env-file`로 전달하고, AWS Secrets Manager는 데모 후 전환 목표다. 자세한 절차와 노출 대응은 [ENVIRONMENT.md](./ENVIRONMENT.md)를 따른다.
+실제 공공데이터포털 키 3개와 OpenAI 키는 로컬 `.env`에만 입력한다. `NEXT_PUBLIC_` 접두사, 코드, Notion, GitHub 커밋에는 키를 넣지 않는다. GitHub Actions Secret은 CI 전용이다. 이번 EC2 데모는 저장소 밖 환경 파일을 `--env-file`로 전달한다. Secrets Manager 조회 코드는 넣지 않는다. 자세한 절차와 노출 대응은 [ENVIRONMENT.md](./ENVIRONMENT.md)를 따른다.
 
 Cursor가 비밀파일을 AI 컨텍스트에서 제외하도록 [ENVIRONMENT.md](./ENVIRONMENT.md)의 패턴으로 루트 `.cursorignore`도 수동 생성한다. `.cursorignore`는 보조 통제이며 실제 키를 채팅·도구 출력에 붙이지 않는다.
 

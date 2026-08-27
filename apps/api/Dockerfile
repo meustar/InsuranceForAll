@@ -1,4 +1,5 @@
-# FastAPI + Alembic 런타임. 비밀은 ARG/ENV/COPY로 굽지 않는다. 베이스는 t4g(arm64) 공식 멀티아키.
+# FastAPI + Alembic 런타임. 비밀은 ARG/ENV/COPY로 굽지 않는다.
+# 베이스는 공식 멀티아키. linux/amd64를 굽지 않는다. 로컬 AMD64와 EC2 arm64는 태그 해석에 맡긴다.
 FROM python:3.12-slim
 
 WORKDIR /app

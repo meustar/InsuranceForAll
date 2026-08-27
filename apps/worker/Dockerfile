@@ -1,4 +1,5 @@
 # Celery 워커. 로컬 Compose와 같이 api 패키지를 PYTHONPATH로 공유한다. 비밀은 이미지에 넣지 않는다.
+# 베이스는 공식 멀티아키. linux/amd64를 굽지 않는다.
 FROM python:3.12-slim
 
 WORKDIR /opt/worker

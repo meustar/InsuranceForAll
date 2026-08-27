@@ -1,4 +1,5 @@
-# Next.js 16 production. Node 24(LTS, arm64). 외부 API 키·NEXT_PUBLIC_* 비밀을 굽지 않는다.
+# Next.js 16 production. Node 24 LTS. 외부 API 키·NEXT_PUBLIC_* 비밀을 굽지 않는다.
+# 베이스는 공식 멀티아키. linux/amd64를 굽지 않는다.
 FROM node:24-bookworm-slim AS deps
 
 WORKDIR /workspace/apps/web

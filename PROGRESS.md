@@ -17,7 +17,7 @@
 
 보험 모집, 상품 비교추천, 청약, 실시간 개인 견적은 **하지 않는다.** 사용자 프로필은 **PostgreSQL에 저장하지 않는다.**
 
-2026-08-28 기준, TRACK B는 **B-3 + G-01~G-10 정합**까지 왔다. TLS·EC2 실측은 다음이다.
+2026-08-28 기준, TRACK B는 **B-3 + G-01~G-10 정합**까지 왔다. 호스트 문서는 **t4g.small · Ubuntu 24.04 · worker 상시 1**로 맞췄다. TLS·2GiB EC2 실측은 다음이다.
 
 ---
 
@@ -236,6 +236,6 @@ cd apps/web; npm test; npm run lint
 
 첫 nginx 스모크는 api/web 재생성 뒤 이전 upstream IP를 잡고 있어 502였고 nginx 재시작 후 통과했다. 첫 PowerShell 통계 본문은 문자 인코딩 오류로 422였으며 UTF-8 바이트 전송으로 고쳐 통과했다. 실패 결과를 통과로 계산하지 않았다.
 
-**리소스 스냅샷:** 개발 PC의 idle에 가까운 `docker stats --no-stream` 합계는 약 264MiB였다. 이는 16GiB 개발 PC의 순간값이며 PDF 피크·EC2 CPU credit·4GiB t4g 적합성·비용 근거가 아니다.
+**리소스 스냅샷:** 2026-08-28 개발 PC `docker stats --no-stream`(이미 떠 있던 prod, **mem_limit 재생성 전**): postgres ~23MiB, redis ~5MiB, nginx ~15MiB, api ~64MiB, worker ~59MiB, web ~68MiB. LIMIT 열은 호스트 ~15GiB였다. 이는 2GiB t4g.small 실측이 아니고 PDF 피크·CPU credit 근거도 아니다. `mem_limit`은 compose config에 반영됐으나 실행 중 컨테이너 recreate는 이번 세션에서 승인되지 않아 적용 확인은 미실행이다.
 
-**남은 위험:** 브라우저 수동 UAT(#2–4, #9–10, #13), B-5 실제 HTTPS에서 `Secure=true` 쿠키 확인, PDF 피크 중 t4g 실측, Ubuntu 26.04 ARM64 AMI SSM 조회, AWS 비용 확인이 남았다. 개발 PC 호스트 Node는 v20.19.6이지만 Compose·Dockerfile은 v24.19.0으로 검증했다. GA4(F-10a)는 구현하지 않았다.
+**남은 위험:** 브라우저 수동 UAT(#2–4, #9–10, #13), B-5 실제 HTTPS에서 `Secure=true` 쿠키 확인, PDF 피크 중 t4g.small(2GiB) 실측, Ubuntu 24.04 arm64 AMI SSM 조회(저장소에 AMI ID 고정 없음), 크레딧·IPv4·EBS 30GB·송신 한도 확인이 남았다. 26.04는 콘솔 Free tier eligible 미확인이라 기본값이 아니다. GA4(F-10a)는 구현하지 않았다.

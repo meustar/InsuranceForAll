@@ -86,7 +86,8 @@ PDF 마스킹 결과의 서버 보관 상한(`DOCUMENT_RESULT_RETENTION_HOURS`, 
 
 ### F-05 · F-06 PDF
 
-- 기존과 동일: 선택, 202+job, 마스킹 JSONB, 원문 삭제, LLM에 원문 금지  
+- 기존과 동일: 선택, 202+job, 마스킹 JSONB, 원문 삭제, LLM에 원문 금지
+- prod 기본은 **worker 컨테이너 상시 1**. 워커가 없으면 job은 Redis에만 쌓이고 마스킹은 완료되지 않는다. FastAPI 안에서 동기로 합치지 않는다.  
 - `anon_session_key_hash`만 연결 (32바이트 이상 원문 토큰은 쿠키에만, 프로필 FK 없음)
 - **진입:** 각 **스코프 탭 하단 CTA** → **`/documents`** 전용 페이지 (허브 보조 링크 가능)
 - **UI:** 파일 선택·업로드·job 상태·마스킹 요약. 「통계로 돌아가기」

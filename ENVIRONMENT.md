@@ -110,11 +110,15 @@ OPENAI_MODEL=gpt-5.6-luna
 3. 모든 운영 명령은 `docker compose --env-file <외부-환경파일> -f docker-compose.prod.yml ...` 형식을 사용한다.
 4. Compose는 이 파일을 호스트 변수 치환에만 사용하고, 서비스별 허용 변수만 컨테이너에 전달한다.
 
-AWS Secrets Manager와 인스턴스 프로파일은 **데모 후 전환 목표**다. 전환 Checkpoint에서 IAM·런타임 주입·애플리케이션 설정 계약을 함께 설계하며, 현재 코드가 지원하지 않는 `_FILE` 경로를 운영 절차로 쓰지 않는다.
+AWS Secrets Manager와 인스턴스 프로파일은 **데모 후 전환 목표**다. 전환 Checkpoint에서 IAM·런타임 주입·애플리케이션 설정 계약을 함께 설계하며, 현재 코드가 지원하지 않는 `_FILE` 경로를 운영 절차로 쓰지 않는다. 데모 코드에 Secrets Manager·NAT 게이트웨이·IAM lookup을 추가하지 않는다.
+
+호스트는 **t4g.small + Ubuntu 24.04 LTS**를 기본으로 한다(TECH_STACK §5). 크레딧 소진·한도 초과 시 On-Demand, T Unlimited surplus, EBS 30GB 총량·스냅샷, 공인 IPv4 시간, NAT, 월 100GB를 넘는 인터넷 송신이 붙을 수 있다. Let's Encrypt 자체 비용이 없어도 80/443 상시 기동은 인스턴스·IPv4 시간을 쓴다. 과금이 없다고 쓰지 않는다.
 
 ## 6. GitHub
 
-GitHub에 올리는 것은 `.env.example`뿐이다. 실제 값은 다음 위치에 저장한다.
+GitHub에 올리는 것은 `.env.example`뿐이다. **GitHub Actions Secret은 CI job 주입 전용**이다. EC2 데모 런타임 비밀은 Actions Secret이 아니라 저장소 밖 환경 파일이다.
+
+CI에 쓸 때는 다음 위치에 저장한다.
 
 - 저장소 → **Settings → Secrets and variables → Actions**
 - 필요 시 환경별 `development`, `production` Environment Secret으로 분리

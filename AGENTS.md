@@ -40,6 +40,7 @@
 - `apps/api`: FastAPI, Pydantic v2, SQLAlchemy 2, Alembic, asyncpg
 - `apps/worker`: Celery 기반 공공 API 동기화·PDF 마스킹
 - PostgreSQL 17은 공공 캐시와 선택 동의 산출물만, Redis 7.4는 브로커·단기 TTL 용도로 사용한다.
+- 운영 호스트 기본은 EC2 **t4g.small**(arm64, 2GiB) + Ubuntu Server **24.04** LTS다. Dockerfile에 `linux/amd64`를 굽지 않는다. SQLite·RDS·프로필 PG 저장을 넣지 않는다.
 
 현재 실제 설정 파일이 생기기 전에는 `TECH_STACK.md`가 목표 구성을 정의한다. 스캐폴딩 후에는 설치 버전과 실행 명령을 실제 lockfile, `package.json`, Python 설정, Compose 파일로 검증한다.
 
