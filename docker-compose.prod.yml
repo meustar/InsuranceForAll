@@ -1,0 +1,120 @@
+# B-1: production-shaped 3-Tier on the same PC. nginx/TLS is B-2. EC2 is later.
+# Secrets come from env_file .env at run time. Do not bake keys into images.
+# postgres and redis must not publish host ports (TECH_STACK §5.1).
+# web/api also stay off the host until nginx (B-2). Smoke health via compose exec.
+# Local HTTP smoke: keep SESSION_COOKIE_SECURE=false in .env until HTTPS.
+
+name: insurance-for-all-prod
+
+services:
+  postgres:
+    image: postgres:17.11-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - net-data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - net-app
+      - net-data
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - pdf_staging:/var/ifa/staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    networks:
+      - net-app
+      - net-data
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-1}
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - pdf_staging:/var/ifa/staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - net-app
+      - net-data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      API_INTERNAL_URL: http://api:8000
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - net-edge
+      - net-app
+    restart: unless-stopped
+
+networks:
+  net-edge:
+  net-app:
+  net-data:
+
+volumes:
+  postgres_data:
+  pdf_staging:

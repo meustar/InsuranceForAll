@@ -213,7 +213,7 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 
 ### 5.1 Docker Compose · nginx · HTTPS (EC2 운영)
 
-로컬은 `docker-compose.yml`, EC2는 `docker-compose.prod.yml`(예정). 비밀값은 [ENVIRONMENT.md](./ENVIRONMENT.md) · `.env.example` 변수명만; 이미지·Dockerfile에 키를 굽지 않는다.
+로컬 개발은 `docker-compose.yml`, 운영 형태 스모크·EC2는 `docker-compose.prod.yml`(nginx는 B-2). 비밀값은 [ENVIRONMENT.md](./ENVIRONMENT.md) · `.env.example` 변수명만; 이미지·Dockerfile에 키를 넣지 않는다.
 
 **Compose network (3-Tier 분리 · 예정 이름):**
 
@@ -266,7 +266,7 @@ Insurance_For_All/
   design/tokens.css      # Tailwind 4 @theme — DESIGN.md §2–§3 미러
   DESIGN.md
   docker-compose.yml     # 로컬 postgres/redis/api/worker (web/nginx는 A-7+)
-  docker-compose.prod.yml  # EC2 (예정)
+  docker-compose.prod.yml  # 로컬 3-Tier 스모크 · EC2 (nginx는 B-2)
   .env.example
   .gitignore
   .dockerignore

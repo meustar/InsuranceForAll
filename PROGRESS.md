@@ -17,7 +17,7 @@
 
 보험 모집, 상품 비교추천, 청약, 실시간 개인 견적은 **하지 않는다.** 사용자 프로필은 **PostgreSQL에 저장하지 않는다.**
 
-2026-08-27 기준, TRACK A는 **A-12(UAT 체크리스트·Compose web)** 까지 왔다. 운영 EC2는 TRACK B다.
+2026-08-27 기준, TRACK B는 **B-1(prod Compose 3-Tier 로컬 기동)** 까지 왔다. nginx·EC2는 다음이다.
 
 ---
 
@@ -100,7 +100,9 @@
 [완료] 기획·SSOT·Stitch·tokens.css
 [완료] A-0 ~ A-11  로컬 P0 (api/worker/web, 통계·PDF·상담, D3)
 [완료] A-12  Compose web + UAT 1–13 체크리스트 (브라우저 E2E는 수동)
-[다음] B    EC2 Docker 3-Tier
+[완료] B-0   api/worker/web Dockerfile (arm64 베이스)
+[완료] B-1   docker-compose.prod.yml (nginx 없음, PG/Redis 호스트 포트 없음)
+[다음] B-2   nginx TLS
 ```
 
 ---
@@ -160,12 +162,14 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 
 - 제품·설계 SSOT와 에이전트 규칙
 - 로컬 Compose (postgres, redis, api, worker, **web:3000**)
+- 운영 형태 `docker-compose.prod.yml` (web/api/worker/redis/postgres, net-edge/app/data)
 - FastAPI 통계·리포트·PDF·상담, Celery 마스킹, Next.js 허브·스코프·D3
 - ERD v1.5 모델과 초기 마이그레이션·스키마 테스트
+- api/worker/web Dockerfile
 
-**없는 것 (TRACK B)**
+**없는 것 (TRACK B 이후)**
 
-- EC2 운영 `docker-compose.prod.yml` · nginx TLS · 서비스별 Dockerfile
+- nginx TLS · certbot · EC2 초기 스크립트
 
 ---
 
