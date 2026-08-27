@@ -41,6 +41,19 @@
 - 통계 여정은 **메인 → `/stats` 허브 → 사용자 선택 탭** (순서 강제 없음). 「이전」→ 허브
 - 차트는 **D3.js** (React Client + ref). 유형은 `PUBLIC_API_PAGE_PLAN.md` §3. TypeScript·Recharts·Chart.js 금지
 
+## 로컬 기동 (A-12)
+
+```powershell
+Copy-Item .env.example .env
+git check-ignore -v .env
+docker compose up
+```
+
+브라우저: `http://localhost:3000` (web). API 직접: `http://localhost:8000/health`.  
+같은 출처 `/api/*`는 Next rewrite로 `api:8000`에 전달된다. 프론트에 `NEXT_PUBLIC_*` 키를 두지 않는다.
+
+호스트에서만 웹을 돌릴 때: `apps/web`에서 `npm ci` 후 `npm run dev`. `API_INTERNAL_URL` 기본값은 `http://localhost:8000`.
+
 ## API 키 시작
 
 ```powershell

@@ -17,7 +17,7 @@
 
 보험 모집, 상품 비교추천, 청약, 실시간 개인 견적은 **하지 않는다.** 사용자 프로필은 **PostgreSQL에 저장하지 않는다.**
 
-2026-08-25 기준, **기획·설계 문서와 UI 프로토타입은 확정**되었고, 코드는 로컬 구현 TRACK A의 **A-0(실행 환경 스켈레톤)과 A-1(DB 스키마 마이그레이션)** 까지 왔다. 통계 API, 화면, 공공 데이터 동기화는 아직이다.
+2026-08-27 기준, TRACK A는 **A-12(UAT 체크리스트·Compose web)** 까지 왔다. 운영 EC2는 TRACK B다.
 
 ---
 
@@ -98,16 +98,9 @@
 
 ```text
 [완료] 기획·SSOT·Stitch·tokens.css
-[완료] A-0  Compose + API health + Worker 스켈레톤
-[완료] A-1  ERD v1.5 Alembic (프로필 테이블 없음)
-[다음] A-2  공공 API 배치 동기화 (F-11)
-        A-3  POST /stats + 익명 세션
-        A-4  AI 리포트
-        A-5  PDF 마스킹
-        A-6  이메일 상담
-        A-7~A-11  Next.js 화면 + D3
-        A-12 UAT 통합
-        B    EC2 Docker 3-Tier (TRACK A 이후)
+[완료] A-0 ~ A-11  로컬 P0 (api/worker/web, 통계·PDF·상담, D3)
+[완료] A-12  Compose web + UAT 1–13 체크리스트 (브라우저 E2E는 수동)
+[다음] B    EC2 Docker 3-Tier
 ```
 
 ---
@@ -166,18 +159,13 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 **있는 것**
 
 - 제품·설계 SSOT와 에이전트 규칙
-- 로컬 Compose (postgres, redis, api, worker)
-- FastAPI health
-- Celery worker 스켈레톤
+- 로컬 Compose (postgres, redis, api, worker, **web:3000**)
+- FastAPI 통계·리포트·PDF·상담, Celery 마스킹, Next.js 허브·스코프·D3
 - ERD v1.5 모델과 초기 마이그레이션·스키마 테스트
 
-**없는 것 (다음 단계)**
+**없는 것 (TRACK B)**
 
-- 공공 OpenAPI 동기화와 캐시 적재
-- `POST /api/v1/stats/*` 및 익명 세션 쿠키
-- AI 리포트, PDF 업로드, 상담 API의 실제 동작
-- `apps/web` (Next.js 화면, D3)
-- EC2 운영 Compose·nginx TLS
+- EC2 운영 `docker-compose.prod.yml` · nginx TLS · 서비스별 Dockerfile
 
 ---
 
@@ -203,4 +191,40 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 4. DB → [ERD.md](./ERD.md) §0  
 5. 코드: `docker-compose.yml`, `apps/api/app/main.py`, `apps/api/app/models.py`
 
-데모(8/27)까지는 A-2 이후 통계 API와 웹 화면이 핵심이다. 배포 도메인·HTTPS는 TRACK A가 안정된 뒤에 정한다.
+배포 도메인·HTTPS는 TRACK B에서 정한다.
+
+---
+
+## 11. A-12 UAT 체크리스트 (FUNCTIONAL_SPEC §6)
+
+정본은 [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) §6이다. 아래는 **실행 방법**과 A-12에서 확인한 결과다. GA4(F-10a)는 P0 필수가 아니라 넣지 않았다.
+
+기동:
+
+```powershell
+git check-ignore -v .env
+docker compose up
+# 다른 터미널 (호스트에 pytest가 있으면)
+cd apps/api; py -m pytest
+cd apps/web; npm test; npm run lint
+```
+
+| # | 수용 | 실행 | A-12 결과 |
+|---|------|------|-----------|
+| 1 | PG에 `session_profiles`/생년월일 컬럼 없음 | `apps/api` `pytest tests/test_schema.py` | **미실행** — 이번 세션 호스트에 pytest 없음. 모델·마이그레이션에 금지 테이블/컬럼 없음(코드) |
+| 2 | 입력 후 `/stats` · 최소 2스코프 통계 | 브라우저: `/` 제출 → `/stats` → health·auto 또는 life | **부분** — 화면·API 있음. 캐시 비면 503. `docker compose up`·브라우저 미실행 |
+| 3 | 스코프 「이전」→ `/stats` | 브라우저 또는 코드 `href="/stats"` | **통과**(코드). 브라우저 미실행 |
+| 4 | 입력 전 탭 비활성, 세션 후 활성 | 브라우저; `AppHeader` `hasSession` | **통과**(코드). 브라우저 미실행 |
+| 5 | 실손 2열+, totalCount≠가입자 | `npm test` health-stats | **통과**(단위 테스트) |
+| 6 | 스코프 AI/폴백, 생년월일 미전송 | `pytest tests/test_reports_api.py` | **미실행**(pytest). 리포트 API·프런트는 생년월일 원문 미포함(코드) |
+| 7 | 상담 전 consultations 비어 있음 | `pytest tests/test_consultations_api.py` | **미실행**(pytest). 거절 시 INSERT 없음은 테스트 파일에 있음 |
+| 8 | 포털 다운이어도 캐시 200 | `pytest tests/test_stats_api.py` | **미실행**(pytest). 캐시 없으면 503(의도)은 테스트 파일에 있음 |
+| 9 | 동의 고지·이메일 only·만료 삭제 | pytest + `/consultations` | **부분** — UI 단위 테스트 통과. API pytest 미실행. 브라우저 미실행 |
+| 10 | 스코프 CTA → `/documents`·`/consultations` | `OptionalActions` | **통과**(코드). 브라우저 미실행 |
+| 11 | `.env`/키 미커밋, 프론트 비밀 없음 | `git check-ignore -v .env`; `NEXT_PUBLIC_` 검색 | **통과** (`.gitignore:13:*.env`). `apps/web`에 `NEXT_PUBLIC_` 없음 |
+| 12 | 고지·sessionStorage, “미수집” 없음 | `npm test` copy.test | **통과**(단위 테스트) |
+| 13 | D3 + 출처·기준·견적 아님 + KPI/표 | health/auto/life 차트 | **통과**(코드, `d3` import). 브라우저 미실행 |
+
+**이번 세션에서 실행한 명령:** `docker compose config --quiet`(통과), `apps/web` `npm test`(25 통과)·`npm run lint`(통과), `git check-ignore -v .env`. `docker compose up`·호스트 pytest는 돌리지 않음.
+
+**남은 위험:** Compose `web`은 기동 시 `npm ci`라 첫 기동이 길다. 통계 화면은 활성 캐시가 있어야 200이다. OpenAI 키가 비면 AI는 폴백이다. SMTP가 비면 상담 알림 메일은 건너뛴다. UAT #1·6–8은 API pytest를 한 번 돌려야 닫힌다. 브라우저 UAT(#2–4, #10, #13)는 수동이다. GA4(F-10a)는 넣지 않았다.
