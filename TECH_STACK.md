@@ -213,7 +213,7 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 
 ### 5.1 Docker Compose · nginx · HTTPS (EC2 운영)
 
-로컬 개발은 `docker-compose.yml`, 운영 형태 스모크·EC2는 `docker-compose.prod.yml`(nginx는 B-2). 비밀값은 [ENVIRONMENT.md](./ENVIRONMENT.md) · `.env.example` 변수명만; 이미지·Dockerfile에 키를 넣지 않는다.
+로컬 개발은 `docker-compose.yml`, 운영 형태 스모크·EC2는 `docker-compose.prod.yml`. 비밀값은 [ENVIRONMENT.md](./ENVIRONMENT.md) · `.env.example` 변수명만; 이미지·Dockerfile에 키를 넣지 않는다.
 
 **Compose network (3-Tier 분리 · 예정 이름):**
 
@@ -223,12 +223,10 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 | `net-app` | web, api, worker, redis | 애플리케이션 |
 | `net-data` | api, worker, postgres, redis | postgres·redis는 **호스트 포트 publish 금지** |
 
-**nginx (Tier-1):** `infra/nginx/nginx.conf`(예정) · 이미지 `nginx:1.30.4-alpine`
+**nginx (Tier-1):** `infra/nginx/nginx.conf` · 이미지 `nginx:1.30.4-alpine`
 
-- `:80` → `:443` 리다이렉트
-- `:443` TLS — Let's Encrypt **certbot**(도메인 A레코드 → EC2 Elastic IP 후 발급). 인증서는 볼륨 mount
-- `/` → `http://web:3000` (Next.js)
-- `/api` → `http://api:8000` (FastAPI; path prefix strip 또는 api가 `/api/v1` 수신)
+- 로컬 스모크(B-2): `:80`만. `/` → `http://web:3000`, `/api` → `http://api:8000` (`/api` 접두사 유지)
+- EC2 HTTPS(B-5): `:80` → `:443` 리다이렉트, Let's Encrypt **certbot**. 인증서는 볼륨 mount. 도메인·IP는 저장소에 하드코딩하지 않는다.
 
 **운영 env (Compose, 값은 EC2 `.env`만):**
 
@@ -262,11 +260,11 @@ Insurance_For_All/
   apps/web/              # Next.js 16, JavaScript (A-7+)
   apps/api/              # FastAPI + Alembic ERD v1.5 + F-11 `python -m app.jobs.sync_public_api`
   apps/worker/           # Celery (A-0 스켈레톤; Dockerfile 예정)
-  infra/nginx/           # nginx.conf (예정)
+  infra/nginx/           # nginx.conf (B-2 HTTP, TLS는 B-5)
   design/tokens.css      # Tailwind 4 @theme — DESIGN.md §2–§3 미러
   DESIGN.md
   docker-compose.yml     # 로컬 postgres/redis/api/worker (web/nginx는 A-7+)
-  docker-compose.prod.yml  # 로컬 3-Tier 스모크 · EC2 (nginx는 B-2)
+  docker-compose.prod.yml  # nginx:80 + web/api/worker/db (TLS는 B-5)
   .env.example
   .gitignore
   .dockerignore

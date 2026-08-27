@@ -1,7 +1,6 @@
-# B-1: production-shaped 3-Tier on the same PC. nginx/TLS is B-2. EC2 is later.
+# B-2: nginx :80 → web:3000, /api → api:8000. TLS is B-5.
 # Secrets come from env_file .env at run time. Do not bake keys into images.
 # postgres and redis must not publish host ports (TECH_STACK §5.1).
-# web/api also stay off the host until nginx (B-2). Smoke health via compose exec.
 # Local HTTP smoke: keep SESSION_COOKIE_SECURE=false in .env until HTTPS.
 
 name: insurance-for-all-prod
@@ -105,6 +104,27 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    networks:
+      - net-edge
+      - net-app
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.30.4-alpine
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
     networks:
       - net-edge
       - net-app
