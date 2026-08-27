@@ -16,6 +16,8 @@ secrets.json
 *.key
 *.p12
 *.pfx
+*.crt
+*.cer
 docker-compose.override.yml
 
 node_modules/
