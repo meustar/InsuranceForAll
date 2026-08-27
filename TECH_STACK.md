@@ -234,7 +234,32 @@ Ubuntu 26.04 LTS: Canonical 2026-04-23 발표, 보안 지원 ~ 2031-04.
 - `SESSION_COOKIE_SECURE=true` — HTTPS 운영
 - `CELERY_CONCURRENCY=1`
 
-**EC2 초기 설정 (요지):** Ubuntu 26.04 · `apt update && apt upgrade` · Docker Engine + Compose v2 · ufw 22/80/443 · repo clone · 저장소 밖 `.env`(chmod 600) · `docker compose -f docker-compose.prod.yml up -d --build` · Alembic migrate · sync 1회.
+### 5.1.1 기동 후 migrate → 공공 sync 1회 (B-3)
+
+순서를 바꾸지 않는다. 스키마가 있어야 캐시 테이블에 쓰고, 화면 통계는 활성 캐시만 읽는다. 포털 호출은 이 배치에서만 한다.
+
+로컬·EC2 공통 (저장소 루트, `.env`는 커밋하지 않음):
+
+```powershell
+git check-ignore -v .env
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec -T api alembic upgrade head
+docker compose -f docker-compose.prod.yml exec -T api python -m app.jobs.sync_public_api
+```
+
+- 같은 1회 sync를 worker에서 돌리려면 `docker compose -f docker-compose.prod.yml exec -T worker celery -A worker.app call worker.sync_public_api` 이다. 둘 다 동시에 돌리지 않는다.
+- `--seed`는 포털 없이 합성 행만 넣는다. 공공 데이터가 아니므로 데모·운영 1회 sync 대신 쓰지 않는다.
+- 통계 스모크: `POST http://localhost/api/v1/stats/health` (또는 `auto` / `life`). JSON 본문 키는 [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) §4 (`birthDate`, `sex`, `areaNm`). **쿼리 문자열에 생년월일을 넣지 않는다.** 본문 값은 로컬 임시 파일에만 두고 저장소·채팅에 붙이지 않는다.
+
+```powershell
+curl.exe -sS -o NUL -w "%{http_code}" http://localhost/api/v1/stats/health -H "Content-Type: application/json" --data-binary "@$env:USERPROFILE\ifa-stats-smoke.json"
+```
+
+캐시가 있으면 200, 없으면 503. 응답에 생년월일 원문이 있으면 실패다.
+
+UAT #1/#11: `docker compose -f docker-compose.prod.yml exec -T api pytest tests/test_schema.py -q` · `git check-ignore -v .env`
+
+**EC2 초기 설정 (요지):** Ubuntu 26.04 · `apt update && apt upgrade` · Docker Engine + Compose v2 · ufw 22/80/443 · repo clone · 저장소 밖 `.env`(chmod 600) · 위 **§5.1.1** (`up` → migrate → sync 1회).
 
 상세 secret·노출 대응은 ENVIRONMENT §5·§6.
 

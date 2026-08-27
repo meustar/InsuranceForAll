@@ -17,7 +17,7 @@
 
 보험 모집, 상품 비교추천, 청약, 실시간 개인 견적은 **하지 않는다.** 사용자 프로필은 **PostgreSQL에 저장하지 않는다.**
 
-2026-08-27 기준, TRACK B는 **B-2(nginx HTTP 프록시)** 까지 왔다. TLS·EC2는 다음이다.
+2026-08-27 기준, TRACK B는 **B-3(migrate → 공공 sync 1회)** 까지 왔다. TLS·EC2는 다음이다.
 
 ---
 
@@ -103,6 +103,7 @@
 [완료] B-0   api/worker/web Dockerfile (arm64 베이스)
 [완료] B-1   docker-compose.prod.yml (nginx 없음, PG/Redis 호스트 포트 없음)
 [완료] B-2   nginx :80 → web·/api (TLS는 B-5)
+[완료] B-3   prod 기동 후 Alembic → 공공 sync 1회 runbook
 [다음] B-5   Let's Encrypt / HTTPS 또는 남은 EC2 항목
 ```
 
@@ -194,7 +195,8 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 2. 기능·UAT → [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md)  
 3. 화면·차트 → [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) §3, [DESIGN.md](./DESIGN.md)  
 4. DB → [ERD.md](./ERD.md) §0  
-5. 코드: `docker-compose.yml`, `apps/api/app/main.py`, `apps/api/app/models.py`
+5. 코드: `docker-compose.yml`, `apps/api/app/main.py`, `apps/api/app/models.py`  
+6. prod 기동 후 DB·캐시: [TECH_STACK.md](./TECH_STACK.md) §5.1.1
 
 배포 도메인·HTTPS는 TRACK B에서 정한다.
 

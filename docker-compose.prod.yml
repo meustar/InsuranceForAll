@@ -1,7 +1,7 @@
 # B-2: nginx :80 → web:3000, /api → api:8000. TLS is B-5.
 # Secrets come from env_file .env at run time. Do not bake keys into images.
 # postgres and redis must not publish host ports (TECH_STACK §5.1).
-# Local HTTP smoke: keep SESSION_COOKIE_SECURE=false in .env until HTTPS.
+# After up: alembic upgrade head, then one public sync (TECH_STACK §5.1). Do not change default commands.
 
 name: insurance-for-all-prod
 
