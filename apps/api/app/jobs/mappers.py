@@ -30,7 +30,10 @@ def _int(item: dict[str, Any], *keys: str) -> int | None:
     value = _get(item, *keys)
     if value is None or value == "":
         return None
-    return int(str(value).replace(",", "").split(".")[0])
+    try:
+        return int(str(value).replace(",", "").split(".")[0])
+    except (TypeError, ValueError):
+        return None
 
 
 def _decimal(item: dict[str, Any], *keys: str) -> Decimal | None:
