@@ -20,9 +20,15 @@ function formatAxisWon(value) {
 }
 
 /**
- * 선택 성별 상품 보험료를 D3 가로 막대 data join으로 그린다.
+ * 한 단위의 범주 값을 D3 가로 막대 data join으로 그린다. 다른 단위는 호출하지 않는다.
  */
-export function HorizontalBarChart({ data, sex }) {
+export function HorizontalBarChart({
+  data,
+  sex,
+  ariaLabel,
+  formatValue = formatWon,
+  formatTick = formatAxisWon,
+}) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -39,7 +45,7 @@ export function HorizontalBarChart({ data, sex }) {
     svg
       .select(".x-axis")
       .attr("transform", `translate(0,${height - 34})`)
-      .call(axisBottom(x).ticks(5).tickFormat(formatAxisWon))
+      .call(axisBottom(x).ticks(5).tickFormat(formatTick))
       .call((group) => group.select(".domain").remove())
       .call((group) => group.selectAll("line").attr("stroke", "var(--color-chart-grid)"))
       .call((group) =>
@@ -88,15 +94,15 @@ export function HorizontalBarChart({ data, sex }) {
       .attr("dominant-baseline", "middle")
       .attr("fill", "var(--color-ink)")
       .attr("font-size", 12)
-      .text((item) => formatWon(item.value));
-  }, [data]);
+      .text((item) => formatValue(item.value));
+  }, [data, formatTick, formatValue]);
 
   return (
     <svg
       ref={ref}
       className="h-auto w-full min-w-[680px]"
       role="img"
-      aria-label={`${sex} 상품 보험료 가로 막대 차트`}
+      aria-label={ariaLabel || `${sex} 상품 보험료 가로 막대 차트`}
     >
       <g className="x-axis" />
       <g className="bars" />

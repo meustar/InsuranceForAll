@@ -1,6 +1,7 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { HealthStatsPage } from "../../../components/health/HealthStatsPage";
+import { AutoStatsPage } from "../../../components/auto/AutoStatsPage";
+import { LifeStatsPage } from "../../../components/life/LifeStatsPage";
+import { notFound } from "next/navigation";
 
 const SCOPES = {
   health: "실손",
@@ -9,25 +10,18 @@ const SCOPES = {
 };
 
 /**
- * 실손만 A-9 화면을 연결하고 자동차·생명 골격은 다음 트랙까지 유지한다.
+ * 스코프 탭을 연결한다. 「이전」은 각 화면에서 허브로만 보낸다.
  */
 export default async function StatsScopePage({ params }) {
   const { scope } = await params;
-  const title = SCOPES[scope];
-  if (!title) {
+  if (!SCOPES[scope]) {
     notFound();
   }
   if (scope === "health") {
     return <HealthStatsPage />;
   }
-
-  return (
-    <section>
-      <Link href="/stats" className="inline-flex min-h-11 items-center text-[14px] text-brand">
-        이전
-      </Link>
-      <h1 className="mt-4 text-[28px] font-bold leading-[1.25] text-ink">{title}</h1>
-      <p className="mt-3 text-base text-ink-muted">통계·차트는 이후 단계에서 붙입니다.</p>
-    </section>
-  );
+  if (scope === "auto") {
+    return <AutoStatsPage />;
+  }
+  return <LifeStatsPage />;
 }
