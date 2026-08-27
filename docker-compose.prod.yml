@@ -1,5 +1,5 @@
 # B-2: nginx :80 → web:3000, /api → api:8000. TLS is B-5.
-# Secrets come from env_file .env at run time. Do not bake keys into images.
+# EC2 demo: pass a repository-external file with --env-file. Compose injects only listed names.
 # postgres and redis must not publish host ports (TECH_STACK §5.1).
 # After up: alembic upgrade head, then one public sync (TECH_STACK §5.1). Do not change default commands.
 
@@ -8,8 +8,6 @@ name: insurance-for-all-prod
 services:
   postgres:
     image: postgres:17.11-alpine
-    env_file:
-      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -33,7 +31,6 @@ services:
       timeout: 3s
       retries: 10
     networks:
-      - net-app
       - net-data
     restart: unless-stopped
 
@@ -41,11 +38,28 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    env_file:
-      - .env
     environment:
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DOCUMENT_RESULT_RETENTION_HOURS: ${DOCUMENT_RESULT_RETENTION_HOURS:-24}
+      AI_REPORT_RETENTION_DAYS: ${AI_REPORT_RETENTION_DAYS:-7}
+      CONSULTATION_RETENTION_DAYS: ${CONSULTATION_RETENTION_DAYS:-30}
+      ENCRYPTION_KEY_VERSION: ${ENCRYPTION_KEY_VERSION:-v1}
+      CONSULTATION_CONSENT_NOTICE_VERSION: ${CONSULTATION_CONSENT_NOTICE_VERSION}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      CONTACT_ENCRYPTION_KEY: ${CONTACT_ENCRYPTION_KEY}
+      SESSION_TOKEN_PEPPER: ${SESSION_TOKEN_PEPPER}
+      REPORT_TOKEN_PEPPER: ${REPORT_TOKEN_PEPPER}
+      CONSULTATION_NOTIFY_EMAIL: ${CONSULTATION_NOTIFY_EMAIL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       PYTHONUNBUFFERED: "1"
     volumes:
       - pdf_staging:/var/ifa/staging
@@ -75,11 +89,15 @@ services:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
-    env_file:
-      - .env
     environment:
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DOCUMENT_RESULT_RETENTION_HOURS: ${DOCUMENT_RESULT_RETENTION_HOURS:-24}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
+      DATA_GO_KR_MEDICAL_API_KEY: ${DATA_GO_KR_MEDICAL_API_KEY}
+      DATA_GO_KR_AUTO_API_KEY: ${DATA_GO_KR_AUTO_API_KEY}
+      DATA_GO_KR_LIFE_API_KEY: ${DATA_GO_KR_LIFE_API_KEY}
       CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-1}
       PYTHONUNBUFFERED: "1"
     volumes:
@@ -90,7 +108,6 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - net-app
       - net-data
     restart: unless-stopped
 
@@ -106,7 +123,6 @@ services:
         condition: service_healthy
     networks:
       - net-edge
-      - net-app
     restart: unless-stopped
 
   nginx:

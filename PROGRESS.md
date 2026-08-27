@@ -2,7 +2,7 @@
 
 **제품:** 모두의 보험 (Insurance For All)  
 **문서 성격:** 공유·온보딩용 진행 브리핑 (구현 계약의 정본이 아님)  
-**기준일:** 2026-08-25  
+**기준일:** 2026-08-28
 **데모 목표:** 2026-08-27 P0 MVP  
 **제품 버전:** MVP 1.4 · 스키마 ERD v1.5
 
@@ -17,7 +17,7 @@
 
 보험 모집, 상품 비교추천, 청약, 실시간 개인 견적은 **하지 않는다.** 사용자 프로필은 **PostgreSQL에 저장하지 않는다.**
 
-2026-08-27 기준, TRACK B는 **B-3(migrate → 공공 sync 1회)** 까지 왔다. TLS·EC2는 다음이다.
+2026-08-28 기준, TRACK B는 **B-3 + G-01~G-10 정합**까지 왔다. TLS·EC2 실측은 다음이다.
 
 ---
 
@@ -118,7 +118,7 @@
 - 루트 `docker-compose.yml`: PostgreSQL 17.11, Redis 7.4, api(`:8000`), worker(`CELERY_CONCURRENCY=1`)
 - `apps/api`: FastAPI, `pydantic-settings`, `GET /health`와 `GET /api/health`가 `{"status":"ok"}` (비밀값 없음)
 - `apps/worker`: Celery 앱 + `worker.ping` 태스크. worker는 `PYTHONPATH`로 api 패키지를 읽어 스키마를 중복하지 않음
-- `.env.example`을 Compose `env_file`로 연결. 실제 키는 로컬 `.env`만 (커밋 금지)
+- 당시 `.env.example`을 복사한 로컬 `.env`를 Compose에 연결했다. 현재는 호스트 변수 치환 후 서비스별 허용 이름만 주입한다.
 
 **아직 없는 것:** Alembic(당시), 통계 API, Next.js, nginx, 운영용 Dockerfile
 
@@ -182,7 +182,7 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 | 보험 비교·가입 사이트다 | 공개 통계를 쉽게 보여주는 참고 도구다 |
 | 개인 보험료를 확정한다 | 공공 필드만. 견적·청약 없음 |
 | 실손 totalCount는 가입자 수다 | 상품·레코드 수다 |
-| 프로필을 DB에 쌓는다 | 브라우저 세션만. 계산 후 생년월일 폐기 |
+| 프로필을 DB에 쌓는다 | 브라우저 세션만. 계산 후 생년월일 재사용·저장·로그 금지 |
 | 화면이 공공 API를 실시간 호출한다 | 화면은 PG 캐시만. 포털은 배치만 |
 | 프론트는 TypeScript다 | JavaScript만 |
 | 차트가 Recharts다 | D3.js만 |
@@ -202,9 +202,9 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 
 ---
 
-## 11. A-12 UAT 체크리스트 (FUNCTIONAL_SPEC §6)
+## 11. UAT 체크리스트 재검증 (FUNCTIONAL_SPEC §6)
 
-정본은 [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) §6이다. 아래는 **실행 방법**과 A-12에서 확인한 결과다. GA4(F-10a)는 P0 필수가 아니라 넣지 않았다.
+정본은 [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) §6이다. 아래는 2026-08-28에 실제 실행한 자동 검증·Compose 스모크와 아직 수동인 항목을 구분한다. GA4(F-10a)는 P0 선택이라 구현하지 않았다.
 
 기동:
 
@@ -216,22 +216,26 @@ cd apps/api; py -m pytest
 cd apps/web; npm test; npm run lint
 ```
 
-| # | 수용 | 실행 | A-12 결과 |
+| # | 수용 | 실행 | 현재 결과 |
 |---|------|------|-----------|
-| 1 | PG에 `session_profiles`/생년월일 컬럼 없음 | `apps/api` `pytest tests/test_schema.py` | **미실행** — 이번 세션 호스트에 pytest 없음. 모델·마이그레이션에 금지 테이블/컬럼 없음(코드) |
-| 2 | 입력 후 `/stats` · 최소 2스코프 통계 | 브라우저: `/` 제출 → `/stats` → health·auto 또는 life | **부분** — 화면·API 있음. 캐시 비면 503. `docker compose up`·브라우저 미실행 |
+| 1 | PG에 `session_profiles`/생년월일 컬럼 없음 | api 전체 pytest(스키마 포함) | **통과** — 47건 통과 |
+| 2 | 입력 후 `/stats` · 최소 2스코프 통계 | worker seed 후 nginx 경유 health·auto POST | **부분** — 두 API 200. 브라우저 입력→허브 클릭은 수동 미실행 |
 | 3 | 스코프 「이전」→ `/stats` | 브라우저 또는 코드 `href="/stats"` | **통과**(코드). 브라우저 미실행 |
 | 4 | 입력 전 탭 비활성, 세션 후 활성 | 브라우저; `AppHeader` `hasSession` | **통과**(코드). 브라우저 미실행 |
 | 5 | 실손 2열+, totalCount≠가입자 | `npm test` health-stats | **통과**(단위 테스트) |
-| 6 | 스코프 AI/폴백, 생년월일 미전송 | `pytest tests/test_reports_api.py` | **미실행**(pytest). 리포트 API·프런트는 생년월일 원문 미포함(코드) |
-| 7 | 상담 전 consultations 비어 있음 | `pytest tests/test_consultations_api.py` | **미실행**(pytest). 거절 시 INSERT 없음은 테스트 파일에 있음 |
-| 8 | 포털 다운이어도 캐시 200 | `pytest tests/test_stats_api.py` | **미실행**(pytest). 캐시 없으면 503(의도)은 테스트 파일에 있음 |
-| 9 | 동의 고지·이메일 only·만료 삭제 | pytest + `/consultations` | **부분** — UI 단위 테스트 통과. API pytest 미실행. 브라우저 미실행 |
+| 6 | 스코프 AI/폴백, 생년월일 미전송 | api `test_reports_api.py` 포함 전체 pytest | **통과** — Responses 요청/혼합 출력/4xx·JSON 오류·빈 출력·timeout 폴백 테스트 |
+| 7 | 상담 전 consultations 비어 있음 | api `test_consultations_api.py` 포함 전체 pytest | **통과** |
+| 8 | 포털 다운이어도 캐시 200 | api stats 테스트 + worker seed 후 nginx 스모크 | **통과** — 포털 비호출 seed 캐시에서 health·auto 200 |
+| 9 | 동의 고지·이메일 only·만료 삭제 | api 전체 pytest + web 테스트 | **통과**(자동). 브라우저 폼 수동 미실행 |
 | 10 | 스코프 CTA → `/documents`·`/consultations` | `OptionalActions` | **통과**(코드). 브라우저 미실행 |
-| 11 | `.env`/키 미커밋, 프론트 비밀 없음 | `git check-ignore -v .env`; `NEXT_PUBLIC_` 검색 | **통과** (`.gitignore:13:*.env`). `apps/web`에 `NEXT_PUBLIC_` 없음 |
-| 12 | 고지·sessionStorage, “미수집” 없음 | `npm test` copy.test | **통과**(단위 테스트) |
+| 11 | `.env`/키 미커밋, 프론트 비밀 없음 | ignore·Compose env 경계·`NEXT_PUBLIC_` 검색 | **통과** — `.env` ignore, 포괄 `env_file` 없음, 서비스별 금지 변수 없음 |
+| 12 | 고지·sessionStorage, “미수집” 없음 | web copy/session 테스트 | **통과** — 익명 쿠키 목적·30분·프로필 미포함·초기화 경로 포함 |
 | 13 | D3 + 출처·기준·견적 아님 + KPI/표 | health/auto/life 차트 | **통과**(코드, `d3` import). 브라우저 미실행 |
 
-**이번 세션에서 실행한 명령:** `docker compose config --quiet`(통과), `apps/web` `npm test`(25 통과)·`npm run lint`(통과), `git check-ignore -v .env`. `docker compose up`·호스트 pytest는 돌리지 않음.
+**실행 결과:** api pytest **47 통과**(Starlette/httpx deprecation 경고 3), worker pytest **5 통과**, web **27 통과**·lint·production build 통과. 개발/운영 Compose config 통과, 운영 이미지 build·기동·Alembic·worker `--seed` sync 성공. nginx 경유 `/`, `/stats`, `/api/health` 200. 통계 health·auto 200, 쿠키 재사용·`Max-Age=1800`·HttpOnly·SameSite=Lax·응답 생년월일 부재·쿼리 거절·초기화 204/만료를 확인했다.
 
-**남은 위험:** Compose `web`은 기동 시 `npm ci`라 첫 기동이 길다. 통계 화면은 활성 캐시가 있어야 200이다. OpenAI 키가 비면 AI는 폴백이다. SMTP가 비면 상담 알림 메일은 건너뛴다. UAT #1·6–8은 API pytest를 한 번 돌려야 닫힌다. 브라우저 UAT(#2–4, #10, #13)는 수동이다. GA4(F-10a)는 넣지 않았다.
+첫 nginx 스모크는 api/web 재생성 뒤 이전 upstream IP를 잡고 있어 502였고 nginx 재시작 후 통과했다. 첫 PowerShell 통계 본문은 문자 인코딩 오류로 422였으며 UTF-8 바이트 전송으로 고쳐 통과했다. 실패 결과를 통과로 계산하지 않았다.
+
+**리소스 스냅샷:** 개발 PC의 idle에 가까운 `docker stats --no-stream` 합계는 약 264MiB였다. 이는 16GiB 개발 PC의 순간값이며 PDF 피크·EC2 CPU credit·4GiB t4g 적합성·비용 근거가 아니다.
+
+**남은 위험:** 브라우저 수동 UAT(#2–4, #9–10, #13), B-5 실제 HTTPS에서 `Secure=true` 쿠키 확인, PDF 피크 중 t4g 실측, Ubuntu 26.04 ARM64 AMI SSM 조회, AWS 비용 확인이 남았다. 개발 PC 호스트 Node는 v20.19.6이지만 Compose·Dockerfile은 v24.19.0으로 검증했다. GA4(F-10a)는 구현하지 않았다.

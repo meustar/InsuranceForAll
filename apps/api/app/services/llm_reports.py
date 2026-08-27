@@ -36,7 +36,7 @@ _BANNED_OUTPUT = re.compile(
 _MAX_JSON_BYTES = 24_000
 _MAX_ROWS = 40
 _LLM_TIMEOUT = 12.0
-_OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions"
+_OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses"
 
 _SYSTEM = (
     "공공 통계를 쉽게 풀어 쓴 참고 설명만 작성한다. "
@@ -128,26 +128,41 @@ def output_is_banned(text: str) -> bool:
     return _BANNED_OUTPUT.search(text) is not None
 
 
+def _extract_output_text(payload: Any) -> str | None:
+    """Responses 출력에서 message의 output_text만 순서대로 합친다."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("output"), list):
+        return None
+    texts: list[str] = []
+    for item in payload["output"]:
+        if not isinstance(item, dict) or item.get("type") != "message":
+            continue
+        content = item.get("content")
+        if not isinstance(content, list):
+            continue
+        for part in content:
+            if (
+                isinstance(part, dict)
+                and part.get("type") == "output_text"
+                and isinstance(part.get("text"), str)
+                and part["text"].strip()
+            ):
+                texts.append(part["text"].strip())
+    return "\n".join(texts) or None
+
+
 async def complete_explanation(
     *,
     api_key: str,
     model: str,
     summary: dict[str, Any],
 ) -> str | None:
-    """OpenAI 채팅 완료. 키는 헤더로만 보내고 타임아웃·오류면 None."""
+    """OpenAI Responses HTTP API를 호출하고 공급자 오류·빈 출력이면 None."""
     if not api_key.strip() or api_key == "local-test-placeholder-not-a-secret":
         return None
     body = {
         "model": model,
-        "temperature": 0.2,
-        "max_tokens": 500,
-        "messages": [
-            {"role": "system", "content": _SYSTEM},
-            {
-                "role": "user",
-                "content": json.dumps(summary, ensure_ascii=False, default=str),
-            },
-        ],
+        "instructions": _SYSTEM,
+        "input": json.dumps(summary, ensure_ascii=False, default=str),
     }
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -155,15 +170,13 @@ async def complete_explanation(
     }
     try:
         async with httpx.AsyncClient(timeout=_LLM_TIMEOUT) as client:
-            response = await client.post(_OPENAI_CHAT_URL, json=body, headers=headers)
+            response = await client.post(_OPENAI_RESPONSES_URL, json=body, headers=headers)
     except httpx.HTTPError:
         return None
     if response.status_code >= 400:
         return None
     try:
-        content = response.json()["choices"][0]["message"]["content"]
-    except (KeyError, IndexError, TypeError, ValueError):
+        content = _extract_output_text(response.json())
+    except (TypeError, ValueError):
         return None
-    if not isinstance(content, str) or not content.strip():
-        return None
-    return content.strip()
+    return content

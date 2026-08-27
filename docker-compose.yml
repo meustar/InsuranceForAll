@@ -1,6 +1,7 @@
 # Local development. Do not bake secrets into images.
 # Copy .env.example → .env and fill values locally. Never commit .env.
-# Browser → web:3000 /api/* is rewritten to api:8000 (Next rewrites). nginx is TRACK B.
+# Browser → web:3000 /api/* is rewritten to api:8000 (Next rewrites).
+# Port 8000 is for host curl/tests only; browser calls must remain same-origin /api.
 
 name: insurance-for-all
 
@@ -37,11 +38,28 @@ services:
     volumes:
       - ./apps/api:/app
       - pdf_staging:/var/ifa/staging
-    env_file:
-      - .env
     environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DOCUMENT_RESULT_RETENTION_HOURS: ${DOCUMENT_RESULT_RETENTION_HOURS:-24}
+      AI_REPORT_RETENTION_DAYS: ${AI_REPORT_RETENTION_DAYS:-7}
+      CONSULTATION_RETENTION_DAYS: ${CONSULTATION_RETENTION_DAYS:-30}
+      ENCRYPTION_KEY_VERSION: ${ENCRYPTION_KEY_VERSION:-v1}
+      CONSULTATION_CONSENT_NOTICE_VERSION: ${CONSULTATION_CONSENT_NOTICE_VERSION}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      CONTACT_ENCRYPTION_KEY: ${CONTACT_ENCRYPTION_KEY}
+      SESSION_TOKEN_PEPPER: ${SESSION_TOKEN_PEPPER}
+      REPORT_TOKEN_PEPPER: ${REPORT_TOKEN_PEPPER}
+      CONSULTATION_NOTIFY_EMAIL: ${CONSULTATION_NOTIFY_EMAIL:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       PYTHONUNBUFFERED: "1"
     command:
       - sh
@@ -74,11 +92,15 @@ services:
       - ./apps/worker:/opt/worker
       - ./apps/api:/opt/api
       - pdf_staging:/var/ifa/staging
-    env_file:
-      - .env
     environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DOCUMENT_RESULT_RETENTION_HOURS: ${DOCUMENT_RESULT_RETENTION_HOURS:-24}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
+      DATA_GO_KR_MEDICAL_API_KEY: ${DATA_GO_KR_MEDICAL_API_KEY}
+      DATA_GO_KR_AUTO_API_KEY: ${DATA_GO_KR_AUTO_API_KEY}
+      DATA_GO_KR_LIFE_API_KEY: ${DATA_GO_KR_LIFE_API_KEY}
       CELERY_CONCURRENCY: ${CELERY_CONCURRENCY:-1}
       PYTHONPATH: /opt/api:/opt/worker
       PYTHONUNBUFFERED: "1"
@@ -93,13 +115,11 @@ services:
         condition: service_healthy
 
   web:
-    image: node:20-bookworm-slim
+    image: node:24-bookworm-slim
     working_dir: /workspace/apps/web
     volumes:
       - .:/workspace
       - web_node_modules:/workspace/apps/web/node_modules
-    env_file:
-      - .env
     environment:
       API_INTERNAL_URL: http://api:8000
     command:

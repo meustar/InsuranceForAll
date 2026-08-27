@@ -108,6 +108,7 @@
 |----|------|------|
 | Macro | OpenAPI 3종 배치 → PG `stats_*` + `public_cache_heads` | PG |
 | 프로필 | 생년월일·성별·지역 | **메모리/`sessionStorage`만** · 종료/초기화/30분 비활성 시 삭제 |
+| 익명 산출물 세션 | 프로필을 담지 않는 `ifa_anon` 난수 쿠키 | 30분 비활성 · `/api/v1` 성공 응답에서 갱신 · 프로필 초기화 시 만료 · PG에는 선택 산출물 HMAC만 |
 | Micro | PDF 마스킹 JSON, AI 요약(통계만), 상담 연락처·선택 메모 | PG (선택·동의 후, `expires_at` 만료 삭제) |
 
 | API | 포털 | 화면 메시지 | 핵심 KPI |

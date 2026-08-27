@@ -19,7 +19,7 @@ from app.insurance_age import (
 )
 from app.schemas.stats import StatsRequest, StatsResponse
 from app.services.stats_query import load_cache_bundle, query_auto, query_health, query_life
-from app.session_tokens import COOKIE_MAX_AGE_SECONDS, COOKIE_NAME, issue_session_token
+from app.session_tokens import bind_session_cookie
 
 router = APIRouter(prefix="/api/v1/stats", tags=["stats"])
 
@@ -50,22 +50,6 @@ def reject_profile_query(request: Request) -> None:
     for key in request.query_params:
         if key in _PROFILE_QUERY_KEYS:
             raise HTTPException(status_code=400, detail="프로필은 JSON 본문으로만 전달합니다.")
-
-
-def _attach_session_cookie(request: Request, response: Response) -> None:
-    """이미 쿠키가 있으면 유지하고, 없으면 불투명 난수만 발급한다."""
-    existing = request.cookies.get(COOKIE_NAME)
-    token = existing if existing and len(existing.encode("utf-8")) >= 32 else issue_session_token()
-    settings = get_settings()
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        max_age=COOKIE_MAX_AGE_SECONDS,
-        httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite="lax",
-        path="/",
-    )
 
 
 def _compute_age(body: StatsRequest, as_of: date) -> int:
@@ -129,7 +113,7 @@ async def post_health(
         rows=rows,
         disclaimer=_DISCLAIMER,
     )
-    _attach_session_cookie(request, response)
+    bind_session_cookie(request, response, secure=get_settings().session_cookie_secure)
     return payload
 
 
@@ -182,7 +166,7 @@ async def post_auto(
         disclaimer=_DISCLAIMER,
         adapter_note=note,
     )
-    _attach_session_cookie(request, response)
+    bind_session_cookie(request, response, secure=get_settings().session_cookie_secure)
     return payload
 
 
@@ -228,5 +212,5 @@ async def post_life(
         rows=rows,
         disclaimer=_DISCLAIMER,
     )
-    _attach_session_cookie(request, response)
+    bind_session_cookie(request, response, secure=get_settings().session_cookie_secure)
     return payload

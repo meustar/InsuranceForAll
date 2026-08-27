@@ -113,6 +113,12 @@ async def get_document(
     if expires <= now:
         raise HTTPException(status_code=404, detail="문서를 찾을 수 없습니다.")
     coverage = document.masked_coverage
+    bind_session_cookie(
+        request,
+        response,
+        secure=get_settings().session_cookie_secure,
+        token=cookie,
+    )
     return DocumentGetResponse(
         job_id=document.job_id,
         status=document.status,

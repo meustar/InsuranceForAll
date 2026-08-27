@@ -68,6 +68,13 @@ export function SessionProvider({ children }) {
   const clear = useCallback(() => {
     clearStoredProfile(window.sessionStorage);
     setProfile(null);
+    void fetch("/api/v1/session", {
+      method: "DELETE",
+      credentials: "include",
+      cache: "no-store",
+    }).catch(() => {
+      /* 서버가 일시 실패해도 로컬 프로필 초기화는 되돌리지 않는다. */
+    });
   }, []);
 
   const value = useMemo(

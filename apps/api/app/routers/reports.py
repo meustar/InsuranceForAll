@@ -21,8 +21,7 @@ from app.services.llm_reports import (
     sanitize_display_payload,
 )
 from app.session_tokens import (
-    COOKIE_MAX_AGE_SECONDS,
-    COOKIE_NAME,
+    bind_session_cookie,
     hmac_session_token,
     issue_session_token,
 )
@@ -38,23 +37,6 @@ def _reject_token_query(request: Request) -> None:
     for key in request.query_params:
         if key in _TOKEN_QUERY_KEYS:
             raise HTTPException(status_code=400, detail="접근 토큰은 Authorization 헤더로만 전달합니다.")
-
-
-def _bind_session_cookie(request: Request, response: Response) -> str:
-    """HMAC에 쓰는 쿠키와 Set-Cookie 값을 같게 유지한다."""
-    existing = request.cookies.get(COOKIE_NAME)
-    token = existing if existing and len(existing.encode("utf-8")) >= 32 else issue_session_token()
-    settings = get_settings()
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        max_age=COOKIE_MAX_AGE_SECONDS,
-        httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite="lax",
-        path="/",
-    )
-    return token
 
 
 def _bearer_token(request: Request) -> str:
@@ -97,7 +79,9 @@ async def create_report(
     is_fallback = markdown is None or output_is_banned(markdown)
     if is_fallback:
         markdown = fallback_markdown(body.scope, summary)
-    cookie_token = _bind_session_cookie(request, response)
+    cookie_token = bind_session_cookie(
+        request, response, secure=settings.session_cookie_secure
+    )
     access_token = issue_session_token()
     now = datetime.now(timezone.utc)
     report = AiReport(
@@ -146,6 +130,11 @@ async def get_report(
         expires = expires.replace(tzinfo=timezone.utc)
     if expires <= now:
         raise HTTPException(status_code=404, detail="리포트를 찾을 수 없습니다.")
+    bind_session_cookie(
+        request,
+        response,
+        secure=get_settings().session_cookie_secure,
+    )
     return ReportGetResponse(
         report_id=report.id,
         scope=report.scope,  # type: ignore[arg-type]

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { insuranceAgeFromIso } from "../lib/insurance-age";
 import { useSessionProfile } from "./SessionProvider";
 
@@ -10,7 +10,8 @@ import { useSessionProfile } from "./SessionProvider";
  */
 export function SessionChips() {
   const pathname = usePathname();
-  const { profile } = useSessionProfile();
+  const router = useRouter();
+  const { profile, clear } = useSessionProfile();
 
   if (!pathname.startsWith("/stats") || !profile) {
     return null;
@@ -39,6 +40,16 @@ export function SessionChips() {
         >
           입력 수정
         </Link>
+        <button
+          type="button"
+          onClick={() => {
+            clear();
+            router.push("/");
+          }}
+          className="inline-flex min-h-11 items-center px-2 text-[14px] text-danger"
+        >
+          프로필 초기화
+        </button>
       </div>
     </div>
   );

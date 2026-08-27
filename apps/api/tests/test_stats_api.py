@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock
 
@@ -8,7 +9,12 @@ from app.main import app
 from app.services.stats_query import CacheBundle
 from app.session_tokens import COOKIE_NAME, hmac_session_token, issue_session_token
 
-_BODY = {"birthDate": "1985-06-15", "sex": "남자", "areaNm": "서울"}
+_today = date.today()
+_BODY = {
+    "birthDate": _today.replace(year=_today.year - 40, day=1).isoformat(),
+    "sex": "남자",
+    "areaNm": "서울",
+}
 
 
 async def _fake_db():
@@ -47,7 +53,7 @@ def test_hmac_does_not_encode_profile() -> None:
     assert len(digest) == 32
     assert len(token.encode("utf-8")) >= 32
     assert "남자" not in token
-    assert "1985" not in token
+    assert _BODY["birthDate"] not in token
     assert "서울" not in token
 
 
@@ -72,7 +78,22 @@ def test_health_post_sets_httponly_cookie_and_omits_birth(monkeypatch) -> None:
     assert cookie
     assert "httponly" in response.headers.get("set-cookie", "").lower()
     assert "samesite=lax" in response.headers.get("set-cookie", "").lower()
+    assert "max-age=1800" in response.headers.get("set-cookie", "").lower()
     assert cookie not in response.text
+
+
+def test_stats_reuses_cookie_and_refreshes_max_age(monkeypatch) -> None:
+    _patch_cache(monkeypatch)
+    client = _client()
+    try:
+        first = client.post("/api/v1/stats/health", json=_BODY)
+        token = first.cookies.get(COOKIE_NAME)
+        second = client.post("/api/v1/stats/auto", json=_BODY)
+    finally:
+        app.dependency_overrides.clear()
+    assert second.status_code == 200
+    assert second.cookies.get(COOKIE_NAME) == token
+    assert "max-age=1800" in second.headers.get("set-cookie", "").lower()
 
 
 def test_stale_flag_and_query_birth_rejected(monkeypatch) -> None:
@@ -80,7 +101,7 @@ def test_stale_flag_and_query_birth_rejected(monkeypatch) -> None:
     client = _client()
     try:
         ok = client.post("/api/v1/stats/auto", json=_BODY)
-        banned = client.post("/api/v1/stats/auto?birthDate=1985-06-15", json=_BODY)
+        banned = client.post("/api/v1/stats/auto?birthDate=redacted", json=_BODY)
         missing = client.post("/api/v1/stats/life", json=_BODY)
     finally:
         app.dependency_overrides.clear()
@@ -89,7 +110,7 @@ def test_stale_flag_and_query_birth_rejected(monkeypatch) -> None:
     assert ok.json()["stale_message"]
     assert ok.json()["adapter"]["aggr"]
     assert banned.status_code == 400
-    assert "1985" not in banned.text
+    assert _BODY["birthDate"] not in banned.text
     assert missing.status_code == 200
     assert missing.json()["adapter"]["rchnAggr"]
     assert missing.json()["adapter"]["areaNm"] == "서울"

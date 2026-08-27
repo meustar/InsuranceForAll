@@ -5,7 +5,7 @@
 
 ## 1. 저장소에 포함되는 파일
 
-- `.env.example`: 변수 이름과 비밀이 아닌 예시만 기록해 Git에 커밋한다.
+- `.env.example`: 변수 이름만 기록해 Git에 커밋한다. 기본값과 실제 값은 넣지 않는다.
 - `.gitignore`: 모든 `.env*`와 `secrets/`를 제외하고 `.env.example`만 허용한다.
 - `.dockerignore`: `.env*`와 비밀 파일을 Docker 빌드 컨텍스트에서 제외한다.
 - `.cursorignore`: Cursor AI 컨텍스트에서 `.env*`, 키 파일, 런타임 개인정보 폴더를 제외한다. `.gitignore`와 동일 패턴을 루트에 두고 Git에 커밋한다.
@@ -40,9 +40,9 @@ Cursor는 `.gitignore`와 기본 목록의 `.env*`도 자동 제외하지만, �
 | `SESSION_COOKIE_SECURE` | 아니오 | api | 로컬 `false`, HTTPS 운영 `true` |
 | `DATA_GO_KR_*` (3개) | **예** | worker | 공공 OpenAPI (Decoding key) |
 | `CELERY_CONCURRENCY` | 아니오 | worker | MVP `1` |
-| `POSTGRES_*`, `DATABASE_URL`, `REDIS_URL` | **예**(password) | api, worker | DB·브로커 |
+| `POSTGRES_*`, `DATABASE_URL`, `REDIS_URL` | **예**(password) | postgres 또는 api·worker | DB·브로커 |
 
-로컬은 `.env.example` → `.env` 복사 후 빈 값만 채운다. **`.env`는 Git에 올리지 않는다.**
+로컬은 `.env.example` → `.env` 복사 후 빈 값만 채운다. 이 파일은 Compose 변수 치환 입력일 뿐 컨테이너 전체에 주입하지 않고, 각 서비스의 `environment`가 필요한 이름만 선택한다. **`.env`는 Git에 올리지 않는다.**
 
 ## 3. API 키·비밀 (요약)
 
@@ -77,14 +77,14 @@ OPENAI_MODEL=gpt-5.6-luna
 - **상담 알림(비밀 아님·필수):** `CONSULTATION_NOTIFY_EMAIL` — 보험 설계사(운영) 수신 주소. `POST /consultations` 성공 시 알림 발송.
 - **SMTP(백엔드 전용):** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` — 트랜잭션 메일 발송. web/worker에 노출하지 않는다.
 - 상담 연락처·메모는 **AES-256-GCM(AEAD)** 으로 암호화한다. 레코드마다 새 nonce를 쓰고 `nonce||ciphertext||tag`를 `contact_encrypted` / `purpose_note_encrypted` BYTEA에 넣으며, `encryption_key_version`만 별도 컬럼으로 둔다. 암호화 키는 DB와 분리한다.
-- 익명 세션 토큰은 32바이트 이상 난수로 쿠키에만 발급하고 DB에는 `HMAC-SHA-256(SESSION_TOKEN_PEPPER, token)`만 저장한다. 쿠키는 `Secure`, `HttpOnly`, `SameSite=Lax`를 적용하고 URL·로그에 넣지 않는다.
+- 익명 세션 토큰은 32바이트 이상 난수로 쿠키에만 발급하고 DB에는 `HMAC-SHA-256(SESSION_TOKEN_PEPPER, token)`만 저장한다. 쿠키는 `HttpOnly`, `SameSite=Lax`, 30분 비활성 수명이며 성공한 `/api/v1` 응답에서 갱신하고 프로필 초기화 시 만료한다. 로컬 HTTP는 `Secure=false`, HTTPS 데모는 `Secure=true`로 명시하며 URL·로그에 넣지 않는다.
 - 리포트 토큰은 32바이트 이상 난수로 발급해 원문을 한 번만 반환한다. URL·브라우저 저장소에 넣지 않고 `Authorization` 헤더로만 전달하며, 서버에는 `HMAC-SHA-256(REPORT_TOKEN_PEPPER, token)`만 저장해 상수 시간 비교한다.
 - 키 생성은 OS CSPRNG(`openssl rand -base64 32` 등)만 사용한다. 임의 문자열이나 사람이 만든 비밀번호를 쓰지 않는다.
 
 ## 4. 애플리케이션 경계
 
 - 네 개 API 키는 FastAPI 또는 Celery worker에서만 읽는다. **web에는 주입하지 않는다.**
-- 서비스별 최소 권한(Compose secrets / Settings 분리 기준):
+- 서비스별 최소 주입 경계:
   - `api`: `OPENAI_API_KEY`, `CONTACT_ENCRYPTION_KEY`, `SESSION_TOKEN_PEPPER`, `REPORT_TOKEN_PEPPER`, DB/Redis 자격증명
   - `worker`: `DATA_GO_KR_*` 3키, 배치에 필요한 DB/Redis 자격증명. OpenAI 키는 worker가 요약을 호출하지 않는 한 넣지 않는다
   - `web`: 외부 API 키·암호화 키·pepper 없음. 필요 시 `API_INTERNAL_URL` 등 서버 전용 비민감 값만
@@ -99,16 +99,18 @@ OPENAI_MODEL=gpt-5.6-luna
 
 ## 5. Docker와 EC2
 
-로컬 개발에서는 Git에서 제외된 `.env`를 사용할 수 있다. 루트 `docker-compose.yml`은 `env_file: .env`로 api/worker에 주입하고, 컨테이너 안 `DATABASE_URL`/`REDIS_URL`만 `postgres`/`redis` 호스트로 덮어쓴다. Dockerfile의 `COPY`·`ARG`·`ENV`로 키를 이미지에 굽지 않는다.
+로컬 개발에서는 Git에서 제외된 루트 `.env`를 Compose 변수 치환 입력으로 사용할 수 있다. `docker-compose.yml`과 `docker-compose.prod.yml`은 포괄 `env_file`을 쓰지 않고 서비스별 `environment`에 필요한 이름만 전달한다. Dockerfile의 `COPY`·`ARG`·`ENV`로 키를 이미지에 넣지 않는다.
 
-배포 환경에서는 평문 `.env`보다 다음 순서를 권장한다.
+### 이번 EC2 데모의 비밀 주입 결정
 
-1. AWS Secrets Manager에 API 키와 애플리케이션 비밀을 저장한다.
-2. EC2 인스턴스 프로파일에 필요한 secret만 읽는 최소 권한을 부여한다.
-3. 실행 시점에 secret을 가져와 API/worker 서비스에만 제공한다.
-4. Docker Compose를 직접 사용할 경우 Compose `secrets`로 `/run/secrets/<name>`에 파일 마운트하고 앱이 `_FILE` 설정을 읽도록 한다. 동일 비밀을 환경변수와 secret 파일에 중복 정의하지 않는다(환경변수가 secret을 가릴 수 있음). 루트 `.env`에는 이미지 태그·로그 수준 등 비민감 치환값만 둔다.
+이번 데모는 **저장소 밖 환경 파일 + 소유자만 읽기 + Compose `--env-file`** 방식으로 확정한다. Secrets Manager와 `_FILE`은 현재 구현하지 않으며 같은 runbook에 섞지 않는다.
 
-임시 데모에서 `.env`를 서버에 둘 수밖에 없다면 저장소 밖에 두고 소유자만 읽도록 제한하며, 배포 후 Secrets Manager로 이전한다.
+1. `.env.example`의 변수 이름을 사용해 저장소 밖에 데모 환경 파일을 만든다. 실제 경로·값은 저장소·문서·채팅에 기록하지 않는다.
+2. EC2에서 소유자만 읽도록 `chmod 600 <외부-환경파일>`을 적용한다.
+3. 모든 운영 명령은 `docker compose --env-file <외부-환경파일> -f docker-compose.prod.yml ...` 형식을 사용한다.
+4. Compose는 이 파일을 호스트 변수 치환에만 사용하고, 서비스별 허용 변수만 컨테이너에 전달한다.
+
+AWS Secrets Manager와 인스턴스 프로파일은 **데모 후 전환 목표**다. 전환 Checkpoint에서 IAM·런타임 주입·애플리케이션 설정 계약을 함께 설계하며, 현재 코드가 지원하지 않는 `_FILE` 경로를 운영 절차로 쓰지 않는다.
 
 ## 6. GitHub
 
@@ -141,7 +143,7 @@ git diff --cached
 1. 해당 제공자에서 키를 즉시 폐기·재발급한다.
 2. GitHub Secret scanning 알림과 Actions 로그를 확인한다.
 3. Git 기록 제거가 필요한지 GitHub 공식 절차에 따라 판단한다.
-4. 새 키는 로컬 `.env`, GitHub Actions Secret, AWS Secrets Manager에만 다시 저장한다.
+4. 새 키는 로컬 `.env`, 이번 데모의 저장소 밖 환경 파일, GitHub Actions Secret에 다시 저장한다. 데모 후 전환을 마쳤다면 AWS Secrets Manager를 사용한다.
 
 ## 9. 공식 근거
 

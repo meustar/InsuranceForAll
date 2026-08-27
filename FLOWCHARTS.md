@@ -102,9 +102,12 @@ flowchart LR
     WEB[Next.js]
     API[FastAPI]
     SESSION["메모리/sessionStorage<br/>프로필 PG 미저장"]
+    COOKIE["HttpOnly ifa_anon<br/>프로필 없음 · 30분 비활성"]
     D3["D3 Client chart<br/>toBarSeries / dumbbell"]
     SESSION -->|프로필 읽기| WEB
     WEB -->|"POST JSON<br/>URL query 금지"| API
+    API -->|성공한 /api/v1 응답에서 갱신| COOKIE
+    WEB -->|프로필 초기화 시 만료 요청| API
     API --> HEAD
     API --> STATS
     WEB --> D3

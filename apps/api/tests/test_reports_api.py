@@ -1,12 +1,15 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 from uuid import UUID
 
+import httpx
 from fastapi.testclient import TestClient
 
 from app.database import get_db
 from app.main import app
 from app.models import AiReport
+from app.services import llm_reports
 from app.services.llm_reports import LlmInputError, fallback_markdown, sanitize_display_payload
 
 _DISPLAYED = {
@@ -43,8 +46,6 @@ def _client(store: FakeReportSession) -> TestClient:
 
 
 def test_placeholder_key_does_not_call_network() -> None:
-    import asyncio
-
     from app.services.llm_reports import complete_explanation
 
     text = asyncio.run(
@@ -55,6 +56,92 @@ def test_placeholder_key_does_not_call_network() -> None:
         )
     )
     assert text is None
+
+
+class FakeResponse:
+    def __init__(self, status_code: int, payload=None, *, invalid_json: bool = False) -> None:
+        self.status_code = status_code
+        self.payload = payload
+        self.invalid_json = invalid_json
+
+    def json(self):
+        if self.invalid_json:
+            raise ValueError("invalid")
+        return self.payload
+
+
+class FakeAsyncClient:
+    def __init__(self, response=None, error: Exception | None = None) -> None:
+        self.response = response
+        self.error = error
+        self.calls = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *_args):
+        return None
+
+    async def post(self, url, *, json, headers):
+        self.calls.append((url, json, headers))
+        if self.error:
+            raise self.error
+        return self.response
+
+
+def _complete_with(monkeypatch, client: FakeAsyncClient):
+    monkeypatch.setattr(llm_reports.httpx, "AsyncClient", lambda **_kwargs: client)
+    return asyncio.run(
+        llm_reports.complete_explanation(
+            api_key="test-only-non-secret",
+            model="gpt-5.6-luna",
+            summary=_DISPLAYED,
+        )
+    )
+
+
+def test_responses_request_and_mixed_output_parsing(monkeypatch) -> None:
+    client = FakeAsyncClient(
+        FakeResponse(
+            200,
+            {
+                "output": [
+                    {"type": "reasoning", "content": []},
+                    {
+                        "type": "message",
+                        "content": [
+                            {"type": "output_text", "text": "첫 문단"},
+                            {"type": "refusal", "refusal": "ignored"},
+                            {"type": "output_text", "text": "둘째 문단"},
+                        ],
+                    },
+                ]
+            },
+        )
+    )
+
+    text = _complete_with(monkeypatch, client)
+
+    assert text == "첫 문단\n둘째 문단"
+    url, body, headers = client.calls[0]
+    assert url == "https://api.openai.com/v1/responses"
+    assert set(body) == {"model", "instructions", "input"}
+    assert "messages" not in body
+    assert "max_tokens" not in body
+    assert "birth" not in body["input"].lower()
+    assert "raw_pdf" not in body["input"].lower()
+    assert headers["Authorization"].startswith("Bearer ")
+
+
+def test_responses_failures_return_none(monkeypatch) -> None:
+    cases = [
+        FakeAsyncClient(FakeResponse(429, {})),
+        FakeAsyncClient(FakeResponse(200, {}, invalid_json=True)),
+        FakeAsyncClient(FakeResponse(200, {"output": [{"type": "reasoning"}]})),
+        FakeAsyncClient(error=httpx.ReadTimeout("timeout")),
+    ]
+    for client in cases:
+        assert _complete_with(monkeypatch, client) is None
 
 
 def test_sanitize_rejects_birth_and_raw_pdf() -> None:
@@ -112,6 +199,7 @@ def test_create_get_report_roundtrip(monkeypatch) -> None:
         assert body["is_fallback"] is False
         assert "birth" not in str(body["input_summary"]).lower()
         assert got.headers.get("cache-control") == "no-store"
+        assert "max-age=1800" in got.headers.get("set-cookie", "").lower()
         assert "access_token" not in body
         denied = client.get(f"/api/v1/reports/{report_id}")
         assert denied.status_code == 401
@@ -158,10 +246,10 @@ def test_rejects_profile_in_displayed_stats(monkeypatch) -> None:
     try:
         response = client.post(
             "/api/v1/reports",
-            json={"scope": "health", "displayedStats": {"row_count": 1, "birthDate": "1990-01-01"}},
+            json={"scope": "health", "displayedStats": {"row_count": 1, "birthDate": "redacted"}},
         )
         assert response.status_code == 400
-        assert "1990" not in response.text
+        assert "redacted" not in response.text
         assert store.reports == {}
     finally:
         app.dependency_overrides.clear()

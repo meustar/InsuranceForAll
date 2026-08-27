@@ -6,6 +6,7 @@ from app.config import get_settings
 from app.routers.consultations import router as consultations_router
 from app.routers.documents import router as documents_router
 from app.routers.reports import router as reports_router
+from app.routers.sessions import router as sessions_router
 from app.routers.stats import router as stats_router
 
 app = FastAPI(title="Insurance For All API", version="0.1.0")
@@ -13,6 +14,7 @@ app.include_router(stats_router)
 app.include_router(reports_router)
 app.include_router(documents_router)
 app.include_router(consultations_router)
+app.include_router(sessions_router)
 
 
 @app.get("/health")

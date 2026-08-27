@@ -27,7 +27,7 @@ class MemoryStorage {
 }
 
 const valid = {
-  birthDate: "1990-03-15",
+  birthDate: `${new Date().getUTCFullYear() - 40}-01-01`,
   sex: "여자",
   areaNm: "서울",
 };
@@ -38,8 +38,8 @@ describe("validateProfileFields", () => {
   });
 
   it("rejects compact or resident-number shaped dates", () => {
-    assert.equal(validateProfileFields({ ...valid, birthDate: "900315" }).ok, false);
-    assert.equal(validateProfileFields({ ...valid, birthDate: "19900315" }).ok, false);
+    assert.equal(validateProfileFields({ ...valid, birthDate: "123456" }).ok, false);
+    assert.equal(validateProfileFields({ ...valid, birthDate: "12345678" }).ok, false);
   });
 
   it("rejects occupation-like extra reliance by requiring the three fields only", () => {

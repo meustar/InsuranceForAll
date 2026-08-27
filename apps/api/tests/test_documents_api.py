@@ -129,5 +129,9 @@ def test_get_requires_matching_session(monkeypatch) -> None:
         assert "original_filename" not in str(body)
         assert body["coverage_json"]["pages"][0]["text_masked"] == "[마스킹]"
         assert ok.headers.get("cache-control") == "no-store"
+        set_cookie = ok.headers.get("set-cookie", "").lower()
+        assert "max-age=1800" in set_cookie
+        assert "httponly" in set_cookie
+        assert "samesite=lax" in set_cookie
     finally:
         app.dependency_overrides.clear()

@@ -44,12 +44,19 @@
 - **P0 미수집:** 직업, 유병력/관심 질환. 공공 API 필터가 아니며 민감도 대비 P0 효용이 없음
 - **처리:** `asOfDate`(이용일)로 **보험나이** 산정 → API 어댑터 (실손 age / 자동차 aggr / 생명 rchnAggr). [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) §2  
 - **전달:** 통계 `POST` JSON 본문으로만 전송. URL·쿼리·분석 이벤트 금지
-- **저장:** **PostgreSQL에 프로필 INSERT 금지.** MVP 기본은 메모리/`sessionStorage`; 쿠키에는 프로필 대신 불투명 익명 키만 허용. 종료·초기화 또는 30분 비활성 시 세션 프로필 삭제
-- **고지:** 비영속이어도 개인정보 처리로 취급한다. 제출 전에 처리 목적·항목·처리 방식·즉시 폐기·브라우저 세션 저장·거부 시 서비스 제한을 알리고, “개인정보 미수집”으로 표현하지 않는다.
-- **비수집(영속):** 이름, 연락처, 주민등록번호, 이메일, 주소. 생년월일은 계산 후 서버에서 즉시 폐기
+- **저장:** **PostgreSQL에 프로필 INSERT 금지.** 메모리/`sessionStorage` 프로필과 프로필을 담지 않는 HttpOnly 익명 쿠키는 아래 수명 표를 따른다.
+- **고지:** 비영속이어도 개인정보 처리로 취급한다. 제출 전에 처리 목적·항목·처리 방식·브라우저 세션 저장·익명 쿠키·거부 시 서비스 제한을 알리고, “개인정보 미수집”으로 표현하지 않는다.
+- **비수집(영속):** 이름, 연락처, 주민등록번호, 이메일, 주소. 서버는 보험나이 계산 후 생년월일을 애플리케이션 로직에서 재사용·저장·로그하지 않고 요청 처리 종료 시 참조를 해제한다. 이는 디스크 wipe나 메모리 제로화를 뜻하지 않는다.
 - **수용:** 필수 누락 시 진행 불가. 완료 후 **통계 허브 `/stats`** (특정 스코프로 강제 이동하지 않음)
 
 근거: 3API 실제 입력 축 + 최소 영속 수집(ERD v1.5).
+
+| 저장 위치 | 담는 값 | 수명 | 갱신 이벤트 | 초기화 | PG 관계 |
+|----------|---------|------|-----------|--------|---------|
+| 브라우저 `sessionStorage` | `birthDate`, `sex`, `areaNm` | 브라우저 세션 종료 또는 30분 비활성 | `pointerdown`, `keydown`, 화면 재활성화 시 유효성 확인. 5초 이내 중복 갱신은 생략 | 프로필 초기화 시 즉시 삭제 | 프로필·보험나이 INSERT 없음 |
+| HttpOnly `ifa_anon` 쿠키 | 프로필을 인코딩하지 않은 32바이트 이상 불투명 난수 | 30분 비활성 (`Max-Age=1800`) | 성공한 `/api/v1` 통계·문서 업로드/폴링·리포트 응답에서 같은 토큰의 Max-Age 갱신 | 프로필 초기화가 `DELETE /api/v1/session`을 호출해 만료 | 원문 토큰 없음. 선택 산출물에 pepper 기반 HMAC만 저장 |
+
+PDF 마스킹 결과의 서버 보관 상한(`DOCUMENT_RESULT_RETENTION_HOURS`, 기본 24시간)은 서버 데이터 보유기간이다. `ifa_anon`의 30분 비활성 수명과 별개이며, 쿠키가 만료·초기화되면 보관 중인 결과도 해당 브라우저에서 조회할 수 없다.
 
 ### F-03 통계 허브 · 탭 조회 (순서 강제 없음)
 
@@ -123,17 +130,19 @@ F-09~F-14 — 기존과 동일(관리자·HITL·OCR·설계사 디렉터리). MV
 | POST | `/api/v1/stats/auto` | 자동차 캐시. 프로필·필터를 JSON body로 전달 |
 | POST | `/api/v1/stats/life` | 생명 캐시. 프로필·필터를 JSON body로 전달 |
 | POST | `/api/v1/documents` | PDF → 202 + job_id |
-| GET | `/api/v1/documents/{job_id}` | 익명 세션 쿠키가 일치하는 상태/결과만 반환 |
+| GET | `/api/v1/documents/{job_id}` | 익명 세션 쿠키가 일치하는 상태/결과만 반환하고 쿠키 수명을 갱신 |
 | POST | `/api/v1/reports` | body.`scope` = health\|auto\|life. `{report_id, access_token}`을 한 번 반환 |
 | GET | `/api/v1/reports/{report_id}` | `Authorization: Bearer <access_token>`으로 조회. 토큰 path/query 금지 |
 | POST | `/api/v1/consultations` | 동의 + **이메일**(`contact_channel=email`) + 선택 메모 |
+| DELETE | `/api/v1/session` | 서버 프로필 저장 없이 `ifa_anon` 쿠키만 만료 |
 
 - **제거/비권장:** `POST /api/v1/profiles`로 프로필을 PG에 쌓는 방식  
+- 브라우저는 항상 same-origin `/api`와 `credentials: "include"`를 사용한다. 로컬은 `web:3000`의 Next rewrite, prod는 nginx `:80/443`이 `/api` 접두사를 유지해 api로 전달한다. CORS 미설정은 의도이며 브라우저에서 `localhost:8000`을 직접 호출하지 않는다.
 - GET body와 생년월일의 URL query 전달을 금지한다. 애플리케이션 API 키도 URL에 넣지 않되, 공공데이터포털 규격상 필요한 `serviceKey` query는 backend/worker 배치 어댑터에서만 만들고 로그·오류에서 전체 URL을 제거한다.
 - 통계 `POST` JSON 공통: `birth_date`(또는 `birthDate`, `YYYY-MM-DD`), `sex`(`남자`\|`여자`), `area_nm`(또는 `areaNm`, 생명 17개 ENUM). 선택 필터는 스코프별(`ptrn`/`mog`, 자동차 종목·차종, 생명 `isu_kind_nm` 등). 응답은 `stale`·`stale_message`·`as_of_date`·`insurance_age`·어댑터 값·캐시 행을 포함하고 **생년월일 원문은 넣지 않는다.** `Cache-Control: no-store`.
 - `POST /api/v1/reports` JSON: `scope`(`health`\|`auto`\|`life`), `displayed_stats`(화면에 보여 준 집계만). 선택 `masked_coverage`. 생년월일·PDF 원문 키는 400. 응답은 `{report_id, access_token}` 한 번. DB에는 `HMAC-SHA-256(REPORT_TOKEN_PEPPER, token)`만 저장한다.
 - 리포트 접근 토큰은 URL에 넣지 않고 `Authorization` 헤더로만 전달한다. 요청·응답 본문과 인증 헤더를 로그에 남기지 않으며 응답은 `Cache-Control: no-store`로 반환한다. LLM 실패·금지 문구면 `is_fallback` 템플릿(UAT #6).
-- 익명 세션 토큰은 32바이트 이상 난수로 `Secure`·`HttpOnly`·`SameSite=Lax` 쿠키(`ifa_anon`)에만 발급한다. 통계 POST는 프로필·HMAC을 INSERT하지 않는다. HMAC-SHA-256(`SESSION_TOKEN_PEPPER`, token)은 이후 문서·리포트 행의 `anon_session_key_hash`에만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 산출물 접근에만 사용한다.
+- 익명 세션 토큰은 32바이트 이상 난수로 `HttpOnly`·`SameSite=Lax` 쿠키(`ifa_anon`)에만 발급한다. HTTP 로컬 스모크는 `Secure=false`, HTTPS 데모는 `Secure=true`다. 성공한 `/api/v1` 통계·문서 업로드/폴링·리포트 응답은 같은 토큰의 `Max-Age=1800`을 갱신한다. 통계 POST는 프로필·HMAC을 INSERT하지 않는다. HMAC-SHA-256(`SESSION_TOKEN_PEPPER`, token)은 이후 문서·리포트 행의 `anon_session_key_hash`에만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 산출물 접근에만 사용한다.
 - `POST /api/v1/consultations` 는 `consent_agreed=true`, 현재 `consent_notice_version`, `contact_channel=email`, 이메일, 선택 메모만 받는다. `phone`은 422. 연락처·메모는 AES-256-GCM(`nonce||ciphertext||tag`)으로 저장하고 만료 행은 INSERT 전에 삭제한다. 성공 시 운영 알림 메일에 신청자 이메일을 넣지 않는다. `GET /api/v1/consultations/notice`는 목적·항목·보유기간·거부권 문구만 반환한다.
 
 ---
@@ -172,7 +181,7 @@ F-09~F-14 — 기존과 동일(관리자·HITL·OCR·설계사 디렉터리). MV
 
 ## 7. 데이터 흐름
 
-**통계:** Browser(메모리/`sessionStorage`) → `POST` JSON → nginx → api(보험나이 계산 후 원문 폐기) → PG `stats_*`
+**통계:** Browser(메모리/`sessionStorage`) → same-origin `/api` `POST` JSON → nginx/Next rewrite → api(보험나이 계산 후 생년월일 재사용·저장·로그 금지, 요청 종료 시 참조 해제) → PG `stats_*`
 
 **PDF:** api → Redis → worker → JSONB (원본 삭제)  
 

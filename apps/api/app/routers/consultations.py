@@ -15,16 +15,17 @@ from app.schemas.consultations import ConsultationCreateRequest, ConsultationCre
 from app.services.aead import encrypt_field
 from app.services.consultations import consent_notice, delete_expired_consultations
 from app.services.notify import send_advisor_notice
-from app.session_tokens import COOKIE_NAME, hmac_session_token
+from app.session_tokens import COOKIE_NAME, bind_session_cookie, hmac_session_token
 
 router = APIRouter(prefix="/api/v1", tags=["consultations"])
 _CACHE_CONTROL = "no-store"
 
 
 @router.get("/consultations/notice")
-def get_consultation_notice() -> dict[str, str]:
+def get_consultation_notice(request: Request, response: Response) -> dict[str, str]:
     """목적·항목·보유기간·거부권 문구. 개인정보는 없다."""
     settings = get_settings()
+    bind_session_cookie(request, response, secure=settings.session_cookie_secure)
     return consent_notice(
         version=settings.consultation_consent_notice_version,
         retention_days=settings.consultation_retention_days,
@@ -69,6 +70,7 @@ async def create_consultation(
     session.add(row)
     await session.commit()
     send_advisor_notice(row.id)
+    bind_session_cookie(request, response, secure=settings.session_cookie_secure)
     return ConsultationCreateResponse(
         id=str(row.id),
         expires_at=row.expires_at.isoformat(),
