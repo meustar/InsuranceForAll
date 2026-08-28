@@ -1,4 +1,5 @@
-# B-2: nginx :80 → web:3000, /api → api:8000. TLS is B-5.
+# B-2/B-4: nginx :80 → web:3000, /api → api:8000. HTTP only. TLS is B-5.
+# B-4 env: SESSION_COOKIE_SECURE=false in the repository-external file.
 # EC2 기본 가정: t4g.small 2GiB. mem_limit은 컨테이너 RSS 상한이며 호스트 swap 1GiB와 별개다.
 # 이미지는 공식 멀티아키. platform: linux/amd64 를 넣지 않는다.
 # EC2 demo: pass a repository-external file with --env-file. Compose injects only listed names.

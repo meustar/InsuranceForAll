@@ -279,9 +279,97 @@ curl.exe -sS -o NUL -w "%{http_code}" http://localhost/api/v1/stats/health -H "C
 
 UAT #1/#11: `docker compose -f docker-compose.prod.yml exec -T api pytest tests/test_schema.py -q` · `git check-ignore -v .env`
 
-**EC2 초기 설정 (요지):** Ubuntu 24.04 LTS · `apt update && apt upgrade` · Docker Engine + Compose v2 · 호스트 **swap 1GiB**(2 GiB OOM 완화, 속도는 느림) · ufw 22/80/443 · repo clone · 저장소 밖 환경 파일(`chmod 600`) · 위 **§5.1.1** (`up` → migrate → worker sync 1회). `docker-compose.prod.yml`의 `mem_limit`은 컨테이너 RSS 상한이며 호스트 swap을 대신하지 않는다.
+**EC2 초기 설정:** HTTP 1차 배포(B-4)는 아래 **§5.1.2**. TLS·certbot은 B-5. `mem_limit`은 컨테이너 RSS 상한이며 호스트 swap을 대신하지 않는다.
 
 상세 secret·노출 대응은 ENVIRONMENT §5·§6.
+
+### 5.1.2 EC2 HTTP 1차 배포 체크리스트 (B-4)
+
+콘솔·SSH·키·실환경 파일은 **사용자가** 만든다. 이 저장소에 AMI ID·도메인·IP·비밀값을 넣지 않는다. 이 단계는 **:80 HTTP만**. Let's Encrypt·443 인증서는 B-5.
+
+호스트: **t4g.small** (2 vCPU / 2 GiB / arm64) · **Ubuntu Server 24.04 LTS**. `t4g.medium`·Ubuntu 26.04를 기본으로 쓰지 않는다. worker는 상시 1. postgres·redis 호스트 포트는 열지 않는다.
+
+환경 파일에 `SESSION_COOKIE_SECURE=false`를 둔다. `true`는 B-5 HTTPS 이후.
+
+**콘솔 (복붙 아님)**
+
+1. 리전 `ap-northeast-2`. AMI는 저장소에 고정하지 않고 조회한다.
+
+```bash
+aws ssm get-parameters --region ap-northeast-2 --names /aws/service/canonical/ubuntu/server/24.04/stable/current/arm64/hvm/ebs-gp3/ami-id
+```
+
+2. 인스턴스 **t4g.small**, 아키텍처 **arm64**. 보안 그룹: SSH 22는 본인 IP만, **80**은 HTTP 데모, **443**은 B-5용으로 열어 두되 이 Checkpoint에서는 TLS를 설정하지 않는다. 3000/8000/5432/6379는 열지 않는다.
+3. 인스턴스 **공인 IPv4**를 쓴다. DNS가 없으면 Elastic IP를 붙여도 된다. 인스턴스를 끈 채 EIP만 두면 시간 과금이 붙을 수 있다. NAT 게이트웨이는 만들지 않는다. 과금이 없다고 단정하지 않는다.
+
+**EC2 SSH (Ubuntu bash, 저장소 루트에서 실행)**
+
+패키지·Docker Engine + Compose v2:
+
+```bash
+sudo apt update && sudo apt upgrade -y
+# Docker Engine + Compose 플러그인: https://docs.docker.com/engine/install/ubuntu/
+sudo apt install -y git
+docker --version
+docker compose version
+```
+
+호스트 swap 1GiB (`mem_limit`과 별개, OOM 완화·속도는 느림):
+
+```bash
+sudo fallocate -l 1G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+swapon --show
+free -h
+```
+
+방화벽:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw --force enable
+sudo ufw status
+```
+
+저장소·비밀·기동. 외부 환경 파일 경로와 값은 채팅·Git에 붙이지 않는다. `.env.example` 변수명만 복사하고 `SESSION_COOKIE_SECURE=false`를 넣는다.
+
+```bash
+cd ~
+git clone <이-저장소-URL>
+cd Insurance_For_All
+git check-ignore -v .env
+chmod 600 <외부-환경파일>
+docker compose --env-file <외부-환경파일> -f docker-compose.prod.yml config
+# 출력에서 5432·6379 호스트 publish가 없어야 한다. 비밀이 펼쳐지므로 로그·채팅에 붙이지 않는다.
+docker compose --env-file <외부-환경파일> -f docker-compose.prod.yml up -d --build
+```
+
+기동 후 순서는 **§5.1.1과 같다.** `--seed`는 합성 캐시이며 데모·운영 공공 sync 대신 쓰지 않는다.
+
+```bash
+docker compose --env-file <외부-환경파일> -f docker-compose.prod.yml exec -T api alembic upgrade head
+docker compose --env-file <외부-환경파일> -f docker-compose.prod.yml exec -T worker python -m app.jobs.sync_public_api
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1/api/health
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1/
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1/stats
+```
+
+통계 POST는 JSON 본문만 사용한다. 키는 FUNCTIONAL_SPEC §4. **생년월일을 URL·채팅·저장소에 넣지 않는다.** 본문은 호스트 임시 파일만 쓴다.
+
+**2GiB 적합성 (개발 PC 수치를 여기에 쓰지 말 것)**
+
+```bash
+free -h
+swapon --show
+docker stats --no-stream
+```
+
+`MEM USAGE / LIMIT`이 compose `mem_limit`과 호스트 약 2GiB 맥락에서 읽히는지 확인한다. PDF 피크·CPU credit은 별도 측정이다. 이 값이 나오기 전에는 2GiB 적합성을 확정하지 않는다.
 
 ## 6. API 키·비밀정보
 

@@ -17,7 +17,7 @@
 
 보험 모집, 상품 비교추천, 청약, 실시간 개인 견적은 **하지 않는다.** 사용자 프로필은 **PostgreSQL에 저장하지 않는다.**
 
-2026-08-28 기준, TRACK B는 **B-3 + G-01~G-10 정합**까지 왔다. 호스트 문서는 **t4g.small · Ubuntu 24.04 · worker 상시 1**로 맞췄다. TLS·2GiB EC2 실측은 다음이다.
+2026-08-28 기준, TRACK B는 **B-4 문서(EC2 HTTP 체크리스트)**까지 왔다. 호스트는 **t4g.small · Ubuntu 24.04 · worker 상시 1**. EC2에서의 실제 `up`·`docker stats`·TLS는 아직이다.
 
 ---
 
@@ -104,7 +104,8 @@
 [완료] B-1   docker-compose.prod.yml (nginx 없음, PG/Redis 호스트 포트 없음)
 [완료] B-2   nginx :80 → web·/api (TLS는 B-5)
 [완료] B-3   prod 기동 후 Alembic → 공공 sync 1회 runbook
-[다음] B-5   Let's Encrypt / HTTPS 또는 남은 EC2 항목
+[완료] B-4   EC2 HTTP 1차 배포 체크리스트 (TECH_STACK §5.1.2). 인스턴스 기동·실측은 사용자
+[다음] B-5   Let's Encrypt / HTTPS (`SESSION_COOKIE_SECURE=true`)
 ```
 
 ---
@@ -171,7 +172,7 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 
 **없는 것 (TRACK B 이후)**
 
-- Let's Encrypt · certbot · EC2 초기 스크립트
+- Let's Encrypt · certbot · EC2에서의 HTTP 실기동·2GiB `docker stats` 기록
 
 ---
 
@@ -197,8 +198,9 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 4. DB → [ERD.md](./ERD.md) §0  
 5. 코드: `docker-compose.yml`, `apps/api/app/main.py`, `apps/api/app/models.py`  
 6. prod 기동 후 DB·캐시: [TECH_STACK.md](./TECH_STACK.md) §5.1.1
+7. EC2 HTTP 배포 명령: [TECH_STACK.md](./TECH_STACK.md) §5.1.2
 
-배포 도메인·HTTPS는 TRACK B에서 정한다.
+배포 HTTPS는 B-5.
 
 ---
 
@@ -238,4 +240,4 @@ cd apps/web; npm test; npm run lint
 
 **리소스 스냅샷:** 2026-08-28 개발 PC `docker stats --no-stream`(이미 떠 있던 prod, **mem_limit 재생성 전**): postgres ~23MiB, redis ~5MiB, nginx ~15MiB, api ~64MiB, worker ~59MiB, web ~68MiB. LIMIT 열은 호스트 ~15GiB였다. 이는 2GiB t4g.small 실측이 아니고 PDF 피크·CPU credit 근거도 아니다. `mem_limit`은 compose config에 반영됐으나 실행 중 컨테이너 recreate는 이번 세션에서 승인되지 않아 적용 확인은 미실행이다.
 
-**남은 위험:** 브라우저 수동 UAT(#2–4, #9–10, #13), B-5 실제 HTTPS에서 `Secure=true` 쿠키 확인, PDF 피크 중 t4g.small(2GiB) 실측, Ubuntu 24.04 arm64 AMI SSM 조회(저장소에 AMI ID 고정 없음), 크레딧·IPv4·EBS 30GB·송신 한도 확인이 남았다. 26.04는 콘솔 Free tier eligible 미확인이라 기본값이 아니다. GA4(F-10a)는 구현하지 않았다.
+**남은 위험:** 브라우저 수동 UAT(#2–4, #9–10, #13). B-4 EC2 HTTP 실기동·`docker stats`(2GiB)는 사용자 실행 전 **미실측**. B-5 HTTPS에서 `Secure=true` 쿠키. AMI는 SSM 조회만(저장소에 ID 고정 없음). 크레딧·IPv4·EBS 30GB·송신 한도. 26.04는 기본값이 아니다. GA4(F-10a)는 구현하지 않았다.

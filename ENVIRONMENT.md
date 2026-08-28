@@ -112,7 +112,7 @@ OPENAI_MODEL=gpt-5.6-luna
 
 AWS Secrets Manager와 인스턴스 프로파일은 **데모 후 전환 목표**다. 전환 Checkpoint에서 IAM·런타임 주입·애플리케이션 설정 계약을 함께 설계하며, 현재 코드가 지원하지 않는 `_FILE` 경로를 운영 절차로 쓰지 않는다. 데모 코드에 Secrets Manager·NAT 게이트웨이·IAM lookup을 추가하지 않는다.
 
-호스트는 **t4g.small + Ubuntu 24.04 LTS**를 기본으로 한다(TECH_STACK §5). 크레딧 소진·한도 초과 시 On-Demand, T Unlimited surplus, EBS 30GB 총량·스냅샷, 공인 IPv4 시간, NAT, 월 100GB를 넘는 인터넷 송신이 붙을 수 있다. Let's Encrypt 자체 비용이 없어도 80/443 상시 기동은 인스턴스·IPv4 시간을 쓴다. 과금이 없다고 쓰지 않는다.
+호스트는 **t4g.small + Ubuntu 24.04 LTS**를 기본으로 한다(TECH_STACK §5). HTTP 1차 배포(B-4) 복붙 명령은 [TECH_STACK.md](./TECH_STACK.md) §5.1.2. 이 단계의 환경 파일은 `SESSION_COOKIE_SECURE=false`다. `true`는 B-5. 크레딧 소진·한도 초과 시 On-Demand, T Unlimited surplus, EBS 30GB 총량·스냅샷, 공인 IPv4 시간, NAT, 월 100GB를 넘는 인터넷 송신이 붙을 수 있다. Let's Encrypt 자체 비용이 없어도 80/443 상시 기동은 인스턴스·IPv4 시간을 쓴다. 과금이 없다고 쓰지 않는다.
 
 ## 6. GitHub
 
