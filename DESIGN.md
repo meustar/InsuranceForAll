@@ -52,7 +52,7 @@ Stitch 프로젝트는 **페이지 IA·카드·차트 자리·톤**의 골격으
 | 한 줄 목적 | 공공 통계 기반 **보험 의사결정 지원**. 견적·모집·비교추천·청약·로그인 없음 |
 | Vibe adjectives | calm, trustworthy, institutional, minimalist, clear, educational |
 | UI 언어 | **한국어** |
-| 계정 | **로그인·아바타·내 정보·회원가입 없음** |
+| 계정 | **로그인·아바타·내 정보·회원가입 없음**. 관리자 로그인은 사용자 Header에 두지 않는다(P1 별 표면) |
 
 **피하기:** purple neon AI 클리셰, dark cyberpunk, 이모지 남발, 하단탭(홈/추천/내정보), 장식용 대시보드, 크림+테라코타 기본 AI 테마.
 
@@ -272,9 +272,9 @@ Primary hover → `color.primary-hover`. Disabled → opacity 0.45, pointer-even
 ### Consultation page `/consultations`
 
 - Shared header/footer. Title H1: “이메일로 상담 신청”
-- **Consent block** (readable 14–16px): 목적·항목(이메일·선택 메모)·보유기간·거부권
 - Short rationale: “통계 확인에는 연락처가 필요 없으며, 상담을 원하실 때만 이메일을 받습니다.”
-- Fields: **이메일 only** (required), 메모 (optional). **No phone**
+- **Consent modal** (`dialog` / `role="dialog"`, readable 14–16px): 목적·항목(이메일·선택 메모)·보유기간·거부권. 인라인 aside가 아님. 항목을 줄이지 않음
+- Fields: **이메일 only** (required), 메모 (optional). **No phone**. 모달 동의 전 제출 불가
 - Checkbox 동의 + primary “상담 신청하기”
 - Success state: “접수되었습니다. 이메일로 연락드립니다.” (가입·견적 확정 금지)
 - Ghost 「통계로 돌아가기」
@@ -287,14 +287,14 @@ Primary hover → `color.primary-hover`. Disabled → opacity 0.45, pointer-even
 2. **Hub `/stats`** — chips → “보고 싶은 통계를 선택하세요” → 3 equal cards → (보조) PDF·상담 링크 → footer · **AI·차트 없음**  
 3. **Scope** — nav → chips → cross-nav → filters → KPI → chart(s) → table → AI → **optional actions (PDF · email consult)** → cross-nav → footer  
 4. **`/documents`** — notice → upload → status → back to stats  
-5. **`/consultations`** — consent → email (+ optional memo) → submit → success/back  
+5. **`/consultations`** — consent modal → email (+ optional memo) → submit → success/back  
 
 Hub card one-liners (고정):
 - 실손: 같은 연령·유형·담보의 상품 보험료 비교  
 - 자동차: 나와 비슷한 조건의 가입대수·집계 보험료  
 - 생명: 같은 연령·성별·지역의 보험종류별 가입건수·가입율  
 
-Filters (identity 아님): health `보험유형`/`담보` · auto `종목`/`차종` · life는 공통 프로필·지역 강조.
+Filters (identity 아님): health `보험유형`/`담보` · auto `종목`/`담보`/`차종` · life `보험종류`/`기준연도`(공통 지역은 세션 칩). 국산/외산은 표만.
 
 ---
 

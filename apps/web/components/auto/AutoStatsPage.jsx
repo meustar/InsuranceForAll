@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { HorizontalBarChart } from "../health/HealthCharts";
 import {
-  BackToHubLink,
   ChartCard,
   ExplanationBlock,
   KpiCard,
   OptionalActions,
+  ScopeCrossNav,
   ScopeFilterBar,
   StatusPanel,
 } from "../stats/StatsChrome";
@@ -148,7 +148,7 @@ export function AutoStatsPage() {
 
   return (
     <section>
-      <BackToHubLink />
+      <ScopeCrossNav current="auto" />
       <h1 className="mt-4 text-[28px] font-bold leading-[1.25] text-ink">자동차</h1>
       <p className="mt-3 text-base leading-6 text-ink-muted">
         나와 비슷한 조건의 가입대수와 집계 보험료를 공공 통계로 살펴봅니다. 견적이 아닙니다.
@@ -261,13 +261,27 @@ function AutoResults({ payload, viewModel, report }) {
         )}
       </ChartCard>
 
+      <ChartCard title="담보·차종별 대당 평균 경과보험료" caption={wonCaption}>
+        {viewModel.perVehicleSeries.length ? (
+          <HorizontalBarChart
+            data={viewModel.perVehicleSeries}
+            ariaLabel="담보·차종별 대당 평균 경과보험료 가로 막대 차트"
+            formatValue={formatWon}
+          />
+        ) : (
+          <p className="py-8 text-center text-[14px] text-ink-muted">
+            대당 평균을 계산할 가입대수가 없어 가로 막대를 표시하지 않습니다.
+          </p>
+        )}
+      </ChartCard>
+
       <AutoTable rows={viewModel.tableRows} total={viewModel.rows.length} caption={wonCaption} />
       <ExplanationBlock
         report={report}
         pendingLabel="화면의 자동차 집계를 바탕으로 쉬운 설명을 준비하고 있습니다."
       />
       <OptionalActions />
-      <BackToHubLink />
+      <ScopeCrossNav current="auto" />
     </div>
   );
 }

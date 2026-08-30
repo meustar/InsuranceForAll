@@ -55,7 +55,7 @@
   시각·공통 UX 정본: DESIGN.md · 차트 유형 정본: PUBLIC_API_PAGE_PLAN.md §3
 
 [Analytics]
-  GA4 gtag — P0 선택(F-10a), 현재 미구현
+  GA4 gtag — P0 선택(F-10a), 현재 미구현. 사용자 앱 로그인과 무관. 생년월일·연락처·리포트 토큰 금지
 ```
 
 ---

@@ -115,7 +115,7 @@ export function HorizontalBarChart({
 /**
  * 같은 상품의 남녀 보험료 차이를 D3 덤벨 data join으로 그린다.
  */
-export function DumbbellChart({ data }) {
+export function DumbbellChart({ data, formatTick = formatAxisWon, ariaLabel }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -132,7 +132,7 @@ export function DumbbellChart({ data }) {
     svg
       .select(".x-axis")
       .attr("transform", `translate(0,${height - 34})`)
-      .call(axisBottom(x).ticks(5).tickFormat(formatAxisWon))
+      .call(axisBottom(x).ticks(5).tickFormat(formatTick))
       .call((group) => group.select(".domain").remove())
       .call((group) => group.selectAll("line").attr("stroke", "var(--color-chart-grid)"))
       .call((group) =>
@@ -181,7 +181,7 @@ export function DumbbellChart({ data }) {
       .attr("fill", "var(--color-chart-label)")
       .attr("font-size", 13)
       .text((item) => shortLabel(item.label));
-  }, [data]);
+  }, [data, formatTick]);
 
   return (
     <div>
@@ -197,7 +197,7 @@ export function DumbbellChart({ data }) {
         ref={ref}
         className="h-auto w-full min-w-[680px]"
         role="img"
-        aria-label="상품별 남녀 보험료 덤벨 차트"
+        aria-label={ariaLabel || "상품별 남녀 보험료 덤벨 차트"}
       >
         <g className="x-axis" />
         <g className="connectors" />

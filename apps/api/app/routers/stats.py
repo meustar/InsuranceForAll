@@ -177,7 +177,7 @@ async def post_life(
     body: StatsRequest,
     session: AsyncSession = Depends(get_db),
 ) -> StatsResponse:
-    """생명 캐시를 도달연령·성별·지역으로 조회한다. 요청 중 포털을 부르지 않는다."""
+    """생명 캐시를 도달연령·지역으로 조회하고 남·여 행을 함께 돌려 덤벨에 쓴다."""
     reject_profile_query(request)
     response.headers["Cache-Control"] = _CACHE_CONTROL
     as_of = _as_of_date()

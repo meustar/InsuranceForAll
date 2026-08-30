@@ -69,6 +69,19 @@ describe("life stats normalization", () => {
     assert.ok(Object.hasOwn(displayed.series, "join_rto_percent"));
   });
 
+  it("builds a dumbbell only when male and female rates exist for the same kind", () => {
+    const mixed = [
+      { isu_kind_nm: "종신", stts_accml_trgt_yr: "2024", sex_nm: "남자", join_cnt: 100, join_rto: "12.5" },
+      { isu_kind_nm: "종신", stts_accml_trgt_yr: "2024", sex_nm: "여자", join_cnt: 80, join_rto: "10.1" },
+      { isu_kind_nm: "정기", stts_accml_trgt_yr: "2024", sex_nm: "남자", join_cnt: 40, join_rto: "4.2" },
+    ];
+    const viewModel = buildLifeViewModel({ rows: mixed, row_count: 3, sex: "남자" });
+    assert.equal(viewModel.dumbbellSeries.length, 1);
+    assert.equal(viewModel.dumbbellSeries[0].male, 12.5);
+    assert.equal(viewModel.dumbbellSeries[0].female, 10.1);
+    assert.equal(viewModel.rateSeries.length, 2);
+  });
+
   it("keeps life page copy free of people-count wording", () => {
     const root = dirname(fileURLToPath(import.meta.url));
     const page = readFileSync(join(root, "../components/life/LifeStatsPage.jsx"), "utf8");

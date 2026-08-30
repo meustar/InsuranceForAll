@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { HorizontalBarChart } from "../health/HealthCharts";
+import { DumbbellChart, HorizontalBarChart } from "../health/HealthCharts";
 import {
-  BackToHubLink,
   ChartCard,
   ExplanationBlock,
   KpiCard,
   OptionalActions,
+  ScopeCrossNav,
   ScopeFilterBar,
   StatusPanel,
 } from "../stats/StatsChrome";
@@ -142,7 +142,7 @@ export function LifeStatsPage() {
 
   return (
     <section>
-      <BackToHubLink />
+      <ScopeCrossNav current="life" />
       <h1 className="mt-4 text-[28px] font-bold leading-[1.25] text-ink">생명</h1>
       <p className="mt-3 text-base leading-6 text-ink-muted">
         같은 연령·성별·지역의 보험종류별 가입건수와 가입율을 공공 통계로 살펴봅니다. 가입건수는 건
@@ -249,13 +249,28 @@ function LifeResults({ payload, viewModel, report }) {
         )}
       </ChartCard>
 
+      {viewModel.dumbbellSeries.length ? (
+        <ChartCard title="보험종류별 남녀 가입율" caption={rateCaption}>
+          <DumbbellChart
+            data={viewModel.dumbbellSeries}
+            formatTick={formatAxisRate}
+            ariaLabel="보험종류별 남녀 가입율 덤벨 차트"
+          />
+        </ChartCard>
+      ) : (
+        <p className="text-[13px] text-ink-muted">
+          같은 종류의 남자·여자 가입율이 모두 없어 남녀 비교 그림을 표시하지 않습니다. 숫자를 만들지
+          않습니다.
+        </p>
+      )}
+
       <LifeTable rows={viewModel.tableRows} total={viewModel.rows.length} caption={countCaption} />
       <ExplanationBlock
         report={report}
         pendingLabel="화면의 생명 집계를 바탕으로 쉬운 설명을 준비하고 있습니다."
       />
       <OptionalActions />
-      <BackToHubLink />
+      <ScopeCrossNav current="life" />
     </div>
   );
 }

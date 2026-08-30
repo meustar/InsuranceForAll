@@ -69,7 +69,7 @@ async def create_consultation(
     )
     session.add(row)
     await session.commit()
-    send_advisor_notice(row.id)
+    send_advisor_notice(row.id, str(body.email))
     bind_session_cookie(request, response, secure=settings.session_cookie_secure)
     return ConsultationCreateResponse(
         id=str(row.id),

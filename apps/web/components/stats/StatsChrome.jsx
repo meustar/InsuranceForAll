@@ -22,7 +22,7 @@ export function KpiCard({ label, value }) {
   return (
     <div className="rounded-[12px] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
       <p className="text-[13px] text-ink-muted">{label}</p>
-      <p className="mt-2 text-[24px] font-bold text-ink">{value}</p>
+      <p className="mt-2 text-[28px] font-bold leading-[1.2] text-ink">{value}</p>
     </div>
   );
 }
@@ -101,6 +101,30 @@ export function BackToHubLink() {
     <Link href="/stats" className="inline-flex min-h-11 items-center text-[14px] text-brand">
       이전
     </Link>
+  );
+}
+
+const SCOPE_LINKS = [
+  { id: "health", href: "/stats/health", label: "실손" },
+  { id: "auto", href: "/stats/auto", label: "자동차" },
+  { id: "life", href: "/stats/life", label: "생명" },
+];
+
+/**
+ * 칩 아래·CTA 위에 같은 교차 내비. Secondary는 다른 두 스코프만, 「이전」은 허브다.
+ */
+export function ScopeCrossNav({ current }) {
+  const secondary =
+    "inline-flex min-h-11 items-center justify-center rounded-[10px] border border-border bg-surface px-4 text-[14px] font-medium text-ink hover:border-border-strong";
+  return (
+    <nav className="flex flex-wrap items-center gap-3" aria-label="다른 통계 스코프">
+      <BackToHubLink />
+      {SCOPE_LINKS.filter((scope) => scope.id !== current).map((scope) => (
+        <Link key={scope.id} href={scope.href} className={secondary}>
+          {scope.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 

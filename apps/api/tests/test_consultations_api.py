@@ -113,11 +113,12 @@ def test_create_encrypts_and_notify_omits_applicant(monkeypatch) -> None:
         assert decrypt_field(secret, row.contact_encrypted) == _APPLICANT
         sent.assert_called_once()
         assert sent.call_args.args[0] == UUID(data["id"])
+        assert sent.call_args.args[1] == _APPLICANT
     finally:
         app.dependency_overrides.clear()
 
 
-def test_notify_body_has_no_applicant_email(monkeypatch) -> None:
+def test_notify_body_includes_applicant_email(monkeypatch) -> None:
     captured = {}
 
     class DummySmtp:
@@ -160,9 +161,9 @@ def test_notify_body_has_no_applicant_email(monkeypatch) -> None:
 
     from app.services.notify import send_advisor_notice
 
-    send_advisor_notice(uuid4())
-    assert _APPLICANT not in captured.get("body", "")
-    assert "advisor@example.com" == captured.get("to")
+    send_advisor_notice(uuid4(), _APPLICANT)
+    assert _APPLICANT in captured.get("body", "")
+    assert captured.get("to") == "advisor@example.com"
 
 
 def test_delete_expired_consultations() -> None:

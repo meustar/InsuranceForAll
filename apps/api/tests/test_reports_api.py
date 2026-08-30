@@ -128,6 +128,9 @@ def test_responses_request_and_mixed_output_parsing(monkeypatch) -> None:
     assert set(body) == {"model", "instructions", "input"}
     assert "messages" not in body
     assert "max_tokens" not in body
+    assert "3~6문장" in body["instructions"]
+    assert "눈에 띄는" in body["instructions"]
+    assert "최적 상품" in body["instructions"]
     assert "birth" not in body["input"].lower()
     assert "raw_pdf" not in body["input"].lower()
     assert headers["Authorization"].startswith("Bearer ")

@@ -50,4 +50,18 @@ describe("user-facing copy", () => {
     assert.match(chips, /프로필 초기화/);
     assert.match(chips, /clear\(\)/);
   });
+
+  it("keeps user chrome free of sign-in and puts scope cross-nav only on scope pages", () => {
+    const header = readFileSync(join(root, "../components/AppHeader.jsx"), "utf8");
+    const hub = readFileSync(join(root, "../components/StatsHub.jsx"), "utf8");
+    const health = readFileSync(join(root, "../components/health/HealthStatsPage.jsx"), "utf8");
+    const auto = readFileSync(join(root, "../components/auto/AutoStatsPage.jsx"), "utf8");
+    const life = readFileSync(join(root, "../components/life/LifeStatsPage.jsx"), "utf8");
+    assert.equal(header.includes("Sign In"), false);
+    assert.equal(header.includes("로그인"), false);
+    assert.equal(hub.includes("ScopeCrossNav"), false);
+    assert.match(health, /ScopeCrossNav current="health"/);
+    assert.match(auto, /ScopeCrossNav current="auto"/);
+    assert.match(life, /ScopeCrossNav current="life"/);
+  });
 });

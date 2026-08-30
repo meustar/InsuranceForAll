@@ -69,7 +69,7 @@
 |------|------|--------|------|
 | F-01 메인 고지 | 있음 | 부분 | `apps/web/app/page.js`, `lib/copy.js` |
 | F-02 공통 입력 | 있음 | 있음 | `sessionStorage` · PG 미저장 |
-| F-03 허브·탭 | **부분** | 부분 | 3스코프 UI·POST는 있음. **스코프 전용 필터 UI(ptrn/mog 등)는 웹에 없음** — API 스키마만 지원 |
+| F-03 허브·탭 | **있음** | 부분 | 3스코프 UI·POST·스코프 전용 필터(`ScopeFilterBar`) 있음 |
 | F-04 실손 비교 | 있음 | 있음 | 남/여 2열+, D3 |
 | F-05 PDF 업로드 | 있음 | 있음 | `POST /api/v1/documents` |
 | F-06 마스킹 | 있음 | 부분 | `worker.mask_document` |
@@ -111,14 +111,13 @@ B-1 산출물은 현재 트리에서 **nginx 서비스가 있는** `docker-compo
 - 운영 형태 `docker-compose.prod.yml`: nginx:80, web/api/worker/redis/postgres (호스트는 nginx만)
 - FastAPI: health, session DELETE, stats POST, documents, reports, consultations
 - Celery: `worker.ping`, `worker.sync_public_api`, `worker.mask_document`
-- Next.js 허브·스코프·D3 (`HealthCharts.jsx`). Recharts·Chart.js 없음
+- Next.js 허브·스코프·D3 (`HealthCharts.jsx`) · 스코프 필터 (`ScopeFilterBar`). Recharts·Chart.js 없음
 - ERD v1.5 모델 9테이블 · Alembic `erd_v15_initial` · 프로필 테이블 없음
 - api/worker/web Dockerfile · `infra/nginx/nginx.conf`
 
 **없는 것 · 미실측**
 
 - Let's Encrypt · certbot · EC2 HTTP 실기동 · 2GiB `docker stats` 기록 (C)
-- 웹의 스코프 전용 필터 UI (B — 스펙 F-03/PAGE_PLAN 대비)
 - GA4 (B — F-10a “가능하면”, 미구현)
 - 브라우저 수동 UAT (#2–4, #9–10, #13)
 

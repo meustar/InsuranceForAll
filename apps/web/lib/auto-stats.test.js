@@ -65,6 +65,7 @@ describe("auto stats normalization", () => {
     assert.equal(encoded.includes("insurance_age"), false);
     assert.equal(displayed.series.join_cnt.length > 0, true);
     assert.equal(displayed.series.elps_inpm_won.length > 0, true);
+    assert.equal(displayed.series.average_elps_per_join_won.length > 0, true);
     assert.equal(formatCount(10), "10대");
   });
 

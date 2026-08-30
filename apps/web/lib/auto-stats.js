@@ -40,6 +40,31 @@ export function normalizeAutoRows(rows) {
   }));
 }
 
+/**
+ * 담보·차종 라벨마다 경과보험료÷가입대수로 대당평균 시리즈를 만든다.
+ */
+function toPerVehicleSeries(rows) {
+  const grouped = new Map();
+  for (const row of rows) {
+    if (!row.joinCount || row.joinCount <= 0 || row.elapsedPremium === null) {
+      continue;
+    }
+    const label = autoLabel(row) || "미분류";
+    const prev = grouped.get(label) || { join: 0, premium: 0 };
+    grouped.set(label, {
+      join: prev.join + row.joinCount,
+      premium: prev.premium + row.elapsedPremium,
+    });
+  }
+  return [...grouped.entries()]
+    .map(([label, parts]) => ({
+      key: label,
+      label,
+      value: parts.premium / parts.join,
+    }))
+    .sort((left, right) => right.value - left.value)
+    .slice(0, MAX_CHART_ROWS);
+}
 function toSeparatedBarSeries(rows, valueField, labelFn) {
   const grouped = new Map();
   for (const row of rows) {
@@ -83,6 +108,7 @@ export function buildAutoViewModel(payload) {
     tableRows: rows.slice(0, MAX_TABLE_ROWS),
     joinSeries: toSeparatedBarSeries(rows, "joinCount", autoLabel),
     premiumSeries: toSeparatedBarSeries(rows, "elapsedPremium", autoLabel),
+    perVehicleSeries: toPerVehicleSeries(rows),
     totalJoin,
     totalPremium,
     perVehicle: totalJoin > 0 ? totalPremium / totalJoin : null,
@@ -116,6 +142,7 @@ export function buildDisplayedAutoStats(payload, viewModel, appliedFilters = {})
     series: {
       join_cnt: viewModel.joinSeries,
       elps_inpm_won: viewModel.premiumSeries,
+      average_elps_per_join_won: viewModel.perVehicleSeries,
     },
   };
 }

@@ -157,11 +157,12 @@ async def query_life(
     isu_kind_nm: str | None,
     stts_accml_trgt_yr: str | None,
 ) -> tuple[list[dict[str, Any]], int, bool]:
-    """생명 도달연령·성별·지역으로 가입현황을 고른다."""
+    """같은 연령·지역의 남·여 행을 함께 고른다. 덤벨은 화면에서 짝을 맞춘다."""
+    _ = sex_nm
     filters = [
         StatsLifeJoinStatus.sync_run_id == sync_run_id,
         StatsLifeJoinStatus.rchn_aggr == rchn_aggr,
-        StatsLifeJoinStatus.sex_nm == sex_nm,
+        StatsLifeJoinStatus.sex_nm.in_(("남자", "여자")),
         StatsLifeJoinStatus.area_nm == area_nm,
     ]
     if isu_kind_nm:

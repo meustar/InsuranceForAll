@@ -63,6 +63,8 @@ describe("consultation form helpers", () => {
     assert.match(blob, /항목/);
     assert.match(blob, /보유기간/);
     assert.match(blob, /거부권/);
+    assert.match(blob, /role="dialog"/);
+    assert.match(blob, /개인정보 처리 고지/);
     assert.match(blob, /업로드/);
   });
 });
