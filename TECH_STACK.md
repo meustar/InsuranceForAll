@@ -390,13 +390,13 @@ docker stats --no-stream
 
 ```text
 Insurance_For_All/
-  apps/web/              # Next.js 16, JavaScript (A-7+)
+  apps/web/              # Next.js 16, JavaScript
   apps/api/              # FastAPI + Alembic ERD v1.5 + F-11 `python -m app.jobs.sync_public_api`
-  apps/worker/           # Celery (A-0 스켈레톤; Dockerfile 예정)
+  apps/worker/           # Celery (Dockerfile 있음)
   infra/nginx/           # nginx.conf (B-2 HTTP, TLS는 B-5)
   design/tokens.css      # Tailwind 4 @theme — DESIGN.md §2–§3 미러
   DESIGN.md
-  docker-compose.yml     # 로컬 postgres/redis/api/worker (web/nginx는 A-7+)
+  docker-compose.yml     # 로컬 postgres/redis/api/worker/web:3000 (nginx는 prod)
   docker-compose.prod.yml  # nginx:80 + web/api/worker/db (TLS는 B-5)
   .env.example
   .gitignore

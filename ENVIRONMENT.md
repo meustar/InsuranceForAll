@@ -14,10 +14,12 @@
 로컬 PowerShell에서:
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
-그 뒤 `.env`의 빈 값에 본인의 키를 직접 입력한다. 실제 값을 문서나 AI 채팅에 붙여 넣지 않는다.
+이미 `.env`가 있으면 다시 복사하지 않는다. `Copy-Item .env.example .env`는 채운 값을 덮어쓴다. 그 뒤 빈 칸만 본인이 채운다. 실제 값을 문서나 AI 채팅에 붙여 넣지 않는다.
+
+`POSTGRES_USER`와 `POSTGRES_DB`는 비우지 않는다. 로컬 Compose healthcheck(`pg_isready -U $POSTGRES_USER -d $POSTGRES_DB`)에서 사용자 이름이 비면 `-d`가 역할 이름으로 파싱되어 `FATAL: role "-d" does not exist`가 난다.
 
 ### Cursor 컨텍스트 차단
 

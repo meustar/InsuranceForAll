@@ -5,7 +5,8 @@
 **마감:** 2026-08-27 **P0만**  
 **관련:** [PRD.md](./PRD.md) · [FLOWCHARTS.md](./FLOWCHARTS.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [DESIGN.md](./DESIGN.md) · [ERD.md](./ERD.md) · [TECH_STACK.md](./TECH_STACK.md)
 
-기능 ID(`F-01`~`F-14`)는 유지. **수용 범위·입출력**은 MVP 1.4 기준.
+기능 ID(`F-01`~`F-14`)는 유지. **수용 범위·입출력**은 MVP 1.4 기준.  
+코드 대비 구현 여부·UAT 실행 기록은 [PROGRESS.md](./PROGRESS.md) (계약이 아님). P0 정의를 후퇴시키지 않는다.
 
 ---
 

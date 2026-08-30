@@ -1,13 +1,14 @@
-# 지금까지 한 일 — 기획부터 A-1까지
+# 현재 상태 보고서 — 모두의 보험
 
 **제품:** 모두의 보험 (Insurance For All)  
 **문서 성격:** 공유·온보딩용 진행 브리핑 (구현 계약의 정본이 아님)  
-**기준일:** 2026-08-28
-**데모 목표:** 2026-08-27 P0 MVP  
+**기준일:** 2026-08-28  
+**데모 목표(역사):** 2026-08-27 P0 MVP  
 **제품 버전:** MVP 1.4 · 스키마 ERD v1.5
 
 화면·API·스키마의 세부 규칙은 이 파일이 아니라 저장소 SSOT를 따른다.  
-[PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [ERD.md](./ERD.md) · [TECH_STACK.md](./TECH_STACK.md)
+충돌 시 Git 문서가 Notion보다 우선한다.  
+[PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) · [DESIGN.md](./DESIGN.md) · [ERD.md](./ERD.md) · [TECH_STACK.md](./TECH_STACK.md) · [ENVIRONMENT.md](./ENVIRONMENT.md)
 
 ---
 
@@ -17,24 +18,11 @@
 
 보험 모집, 상품 비교추천, 청약, 실시간 개인 견적은 **하지 않는다.** 사용자 프로필은 **PostgreSQL에 저장하지 않는다.**
 
-2026-08-28 기준, TRACK B는 **B-4 문서(EC2 HTTP 체크리스트)**까지 왔다. 호스트는 **t4g.small · Ubuntu 24.04 · worker 상시 1**. EC2에서의 실제 `up`·`docker stats`·TLS는 아직이다.
+2026-08-28 코드 기준, 로컬 P0(TRACK A, A-0~A-12)와 운영 형태 산출물(TRACK B, B-0~B-4 **문서·Compose·Dockerfile**)은 저장소에 있다. EC2 인스턴스 기동·`docker stats`·TLS(B-5)는 **미실측**이다. 로컬 `docker compose up`은 postgres/redis까지 Healthy인 적이 있으나, api/worker는 기동 시 PyPI 다운로드 타임아웃으로 죽은 적이 있다(앱 결함이 아니라 기동 리스크).
 
 ---
 
-## 1. 왜 만들었는가
-
-| 현장에서 보이는 문제 | 이 제품이 하려는 일 |
-|----------------------|---------------------|
-| 견적·상담 전에 연락처를 요구해 탐색이 끊김 | 탐색 단계에서는 연락처를 받지 않음 |
-| 약관·증권 용어가 어려움 | 공공 통계 + 쉬운 설명으로 기준을 줌 |
-| 나와 비슷한 조건의 공개 통계가 안 보임 | 보험나이·성별·지역에 맞춘 캐시 통계 |
-| “추천” 문구가 중개·가입 권유로 오인됨 | 참고용·가입 권유 아님·견적 아님을 고정 |
-
-규제 맥락(상세·링크는 PRD): 최소 수집(개인정보 보호법), 광고·권유로 읽히지 않기(금융소비자보호법), 플랫폼 비교·추천 서비스와 **같은 지위라고 주장하지 않기**.
-
----
-
-## 2. 사용자가 하게 되는 일 (P0)
+## 1. 사용자가 하게 되는 일 (P0)
 
 ```text
 메인 (소개·고지 + 생년월일·성별·지역)
@@ -50,11 +38,13 @@
 입력은 **생년월일(YYYY-MM-DD), 성별, 지역**뿐이다. 직업·유병력은 P0에서 받지 않는다.  
 세션 프로필은 브라우저 `sessionStorage`에만 두고, 종료·초기화 또는 30분 비활성 시 삭제한다. 비영속이어도 개인정보 처리로 고지하며, “개인정보를 수집하지 않는다”고 쓰지 않는다.
 
+계약 문장은 [PRD.md](./PRD.md) · [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) · [FLOWCHARTS.md](./FLOWCHARTS.md).
+
 ---
 
-## 3. 기획에서 잠근 핵심 결정
+## 2. 기획에서 잠근 핵심 결정
 
-문서가 여러 버전을 거치며 바뀐 내용을 **지금 기준으로만** 정리한다. 구버전(프로필 PG 저장, 실손→자동차→생명 강제 순서, TypeScript 프론트, Recharts 등)은 폐기했다.
+구버전(프로필 PG 저장, 실손→자동차→생명 강제 순서, TypeScript 프론트, Recharts 등)은 폐기했다.
 
 | 주제 | 확정 |
 |------|------|
@@ -71,112 +61,81 @@
 
 ---
 
-## 4. 기획·설계에서 만든 산출물
+## 3. F-ID × 구현 × 테스트 (2026-08-28 코드)
 
-구현 전에 **문서가 계약**이 되도록 맞췄다. Notion은 검토·공유용이고, 구현 시 충돌하면 **이 저장소 파일이 우선**이다.
+정본 수용 기준은 [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md)다. 아래는 **코드가 있는지**만 적는다. P0 정의를 후퇴시키지 않는다.
 
-| 파일 | 역할 |
-|------|------|
-| [README.md](./README.md) | 읽을 순서, 한 줄 요약, Cursor 주의 |
-| [PRD.md](./PRD.md) | 목표 G1–G10, 비목표, 여정 |
-| [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) | F-01~F-11, API, UAT 1–13 |
-| [FLOWCHARTS.md](./FLOWCHARTS.md) | 사용자·시스템 흐름 |
-| [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) | 화면·공공 API 입력·차트 유형·AI |
-| [DESIGN.md](./DESIGN.md) | 토큰, Header/Footer, 금지 카피 |
-| [ERD.md](./ERD.md) | PG에 넣어도 되는 것 / 넣으면 안 되는 것 |
-| [TECH_STACK.md](./TECH_STACK.md) | 버전 고정, Compose·EC2 방향 |
-| [ENVIRONMENT.md](./ENVIRONMENT.md) | `.env`, 키, GitHub/배포 비밀 |
-| [AGENTS.md](./AGENTS.md) | 에이전트 작업 규칙·Checkpoint |
+| F-ID | 구현 | 테스트 | 비고 |
+|------|------|--------|------|
+| F-01 메인 고지 | 있음 | 부분 | `apps/web/app/page.js`, `lib/copy.js` |
+| F-02 공통 입력 | 있음 | 있음 | `sessionStorage` · PG 미저장 |
+| F-03 허브·탭 | **부분** | 부분 | 3스코프 UI·POST는 있음. **스코프 전용 필터 UI(ptrn/mog 등)는 웹에 없음** — API 스키마만 지원 |
+| F-04 실손 비교 | 있음 | 있음 | 남/여 2열+, D3 |
+| F-05 PDF 업로드 | 있음 | 있음 | `POST /api/v1/documents` |
+| F-06 마스킹 | 있음 | 부분 | `worker.mask_document` |
+| F-07 스코프 AI | 있음 | 있음 | 화면 집계만 · 생년월일/원본 PDF 거절 |
+| F-08 상담 이메일 | 있음 | 있음 | SMTP 미설정 시 알림은 건너뜀 |
+| F-11 공공 배치 | 있음 | 있음 | `worker.sync_public_api` |
+| F-10a GA4 | **없음** | 없음 | 스펙은 “가능하면”. [TECH_STACK.md](./TECH_STACK.md)도 미구현 |
 
-에이전트는 기능 단위가 끝나면 **STOP**하고, **commit/push는 사용자가 한다.**
+UAT 1–13 상세는 §8. 브라우저 E2E는 수동이 남아 있다.
 
 ---
 
-## 5. 구현 로드맵에서 지금 어디인가
+## 4. 구현 로드맵
 
-로컬 구현을 TRACK A, EC2 배포를 TRACK B로 나눈다. 한 Checkpoint씩만 진행한다.
+로컬을 TRACK A, EC2 배포를 TRACK B로 나눈다.
 
 ```text
 [완료] 기획·SSOT·Stitch·tokens.css
 [완료] A-0 ~ A-11  로컬 P0 (api/worker/web, 통계·PDF·상담, D3)
 [완료] A-12  Compose web + UAT 1–13 체크리스트 (브라우저 E2E는 수동)
-[완료] B-0   api/worker/web Dockerfile (arm64 베이스)
-[완료] B-1   docker-compose.prod.yml (nginx 없음, PG/Redis 호스트 포트 없음)
+[완료] B-0   api/worker/web Dockerfile (멀티아키 베이스, amd64 고정 없음)
+[완료] B-1   docker-compose.prod.yml (PG/Redis 호스트 포트 없음)
 [완료] B-2   nginx :80 → web·/api (TLS는 B-5)
 [완료] B-3   prod 기동 후 Alembic → 공공 sync 1회 runbook
-[완료] B-4   EC2 HTTP 1차 배포 체크리스트 (TECH_STACK §5.1.2). 인스턴스 기동·실측은 사용자
+[완료] B-4   EC2 HTTP 체크리스트 (TECH_STACK §5.1.2). 인스턴스 기동·실측은 사용자
 [다음] B-5   Let's Encrypt / HTTPS (`SESSION_COOKIE_SECURE=true`)
 ```
 
----
-
-## 6. A-0에서 한 일
-
-**목적:** 통계·화면 전에, 로컬에서 API와 worker가 DB·Redis와 붙는 **실행 뼈대**를 만든다. Dockerfile·웹·nginx는 이 단계에 넣지 않았다.
-
-**들어간 것**
-
-- 루트 `docker-compose.yml`: PostgreSQL 17.11, Redis 7.4, api(`:8000`), worker(`CELERY_CONCURRENCY=1`)
-- `apps/api`: FastAPI, `pydantic-settings`, `GET /health`와 `GET /api/health`가 `{"status":"ok"}` (비밀값 없음)
-- `apps/worker`: Celery 앱 + `worker.ping` 태스크. worker는 `PYTHONPATH`로 api 패키지를 읽어 스키마를 중복하지 않음
-- 당시 `.env.example`을 복사한 로컬 `.env`를 Compose에 연결했다. 현재는 호스트 변수 치환 후 서비스별 허용 이름만 주입한다.
-
-**아직 없는 것:** Alembic(당시), 통계 API, Next.js, nginx, 운영용 Dockerfile
-
-**검증 방향:** `docker compose up` 후 health 200, api/worker pytest 스모크. UAT #11(비밀값 미커밋) 준비.
+B-1 산출물은 현재 트리에서 **nginx 서비스가 있는** `docker-compose.prod.yml`이다. “nginx 없음”은 과거 Checkpoint 서술이다.
 
 ---
 
-## 7. A-1에서 한 일
-
-**목적:** [ERD.md](./ERD.md) v1.5를 PostgreSQL에 그대로 올리는 **초기 마이그레이션**. 이후 통계·PDF·상담 API가 붙을 테이블을 미리 만든다.
-
-**테이블 (9개)**
-
-| 구분 | 테이블 | 용도 |
-|------|--------|------|
-| 공공 캐시 | `public_sync_runs`, `public_cache_heads` | 배치 실행 기록, 활성 캐시 포인터 |
-| 통계 | `stats_medical_rates`, `stats_auto_contracts`, `stats_life_join_status` | 실손·자동차·생명 캐시 행 |
-| 선택 산출물 | `uploaded_documents`, `masked_coverages`, `ai_reports` | PDF job·마스킹 JSON·AI 리포트 |
-| 동의 후 | `consultation_requests` | 이메일 상담 (암호화·만료) |
-
-**의도적으로 없는 것**
-
-- `session_profiles` / `user_profiles` / `profiles`
-- 생년월일, 보험나이, 원본 파일명, 접근 토큰 원문 컬럼
-
-익명 세션·리포트 토큰은 원문을 DB에 두지 않고 HMAC 해시만 둔다. 상세는 ERD.
-
-**코드**
-
-- `apps/api/app/models.py` — SQLAlchemy 모델
-- `apps/api/alembic/versions/20260825_erd_v15_initial.py` — `upgrade` / `downgrade`
-- `apps/api/tests/test_schema.py` — 필수 테이블 존재, 금지 테이블·컬럼 없음
-
-**검증 방향:** Alembic `upgrade head` 후 스키마 검사, `downgrade` 경로, pytest. 이는 UAT #1(PG에 세션 프로필/생년월일 컬럼 없음)의 기반이다.
-
-A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일은 A-2(F-11 sync)다.
-
----
-
-## 8. 지금 저장소에 있는 것 / 없는 것
+## 5. 지금 저장소에 있는 것 / 없는 것
 
 **있는 것**
 
 - 제품·설계 SSOT와 에이전트 규칙
-- 로컬 Compose (postgres, redis, api, worker, **web:3000**)
-- 운영 형태 `docker-compose.prod.yml` (nginx:80, web/api/worker/redis/postgres)
-- FastAPI 통계·리포트·PDF·상담, Celery 마스킹, Next.js 허브·스코프·D3
-- ERD v1.5 모델과 초기 마이그레이션·스키마 테스트
+- 로컬 `docker-compose.yml`: postgres, redis, api, worker, **web:3000**
+- 운영 형태 `docker-compose.prod.yml`: nginx:80, web/api/worker/redis/postgres (호스트는 nginx만)
+- FastAPI: health, session DELETE, stats POST, documents, reports, consultations
+- Celery: `worker.ping`, `worker.sync_public_api`, `worker.mask_document`
+- Next.js 허브·스코프·D3 (`HealthCharts.jsx`). Recharts·Chart.js 없음
+- ERD v1.5 모델 9테이블 · Alembic `erd_v15_initial` · 프로필 테이블 없음
 - api/worker/web Dockerfile · `infra/nginx/nginx.conf`
 
-**없는 것 (TRACK B 이후)**
+**없는 것 · 미실측**
 
-- Let's Encrypt · certbot · EC2에서의 HTTP 실기동·2GiB `docker stats` 기록
+- Let's Encrypt · certbot · EC2 HTTP 실기동 · 2GiB `docker stats` 기록 (C)
+- 웹의 스코프 전용 필터 UI (B — 스펙 F-03/PAGE_PLAN 대비)
+- GA4 (B — F-10a “가능하면”, 미구현)
+- 브라우저 수동 UAT (#2–4, #9–10, #13)
 
 ---
 
-## 9. 다른 사람에게 자주 생기는 오해
+## 6. 로컬 기동 주의 (앱 결함으로 쓰지 말 것)
+
+정본 절차는 [README.md](./README.md) · [ENVIRONMENT.md](./ENVIRONMENT.md).
+
+1. **`.env` 덮어쓰기:** `Copy-Item .env.example .env`는 이미 채운 `.env`를 빈 템플릿으로 덮는다. **최초 1회만.** 이후에는 `docker compose up`만 실행한다.
+2. **`POSTGRES_USER` / `POSTGRES_DB`는 비우지 않는다.** 비면 healthcheck가 `pg_isready -U -d …`가 되어 `FATAL: role "-d" does not exist`가 난다. 값은 채팅·문서에 적지 않는다.
+3. **기동 시 pip:** 로컬 api/worker는 `python:3.12-slim`에서 **매 기동** `pip install --no-cache-dir`를 한다. `files.pythonhosted.org` Read timed out로 컨테이너가 exit 2가 된 적이 있다. postgres/redis Healthy와 별개다. prod Compose는 Dockerfile에 의존성을 굽는다.
+4. 볼륨 `postgres_data`가 있으면 `Skipping initialization`은 정상이다.
+
+---
+
+## 7. 다른 사람에게 자주 생기는 오해
 
 | 오해 | 실제 |
 |------|------|
@@ -187,57 +146,46 @@ A-1 시점에는 **통계 데이터가 아직 없다.** 캐시를 채우는 일�
 | 화면이 공공 API를 실시간 호출한다 | 화면은 PG 캐시만. 포털은 배치만 |
 | 프론트는 TypeScript다 | JavaScript만 |
 | 차트가 Recharts다 | D3.js만 |
+| 로컬 pip timeout은 DB 장애다 | PyPI 다운로드 실패. postgres는 별도 |
 
 ---
 
-## 10. 다음에 보면 좋은 것
+## 8. UAT 체크리스트 (FUNCTIONAL_SPEC §6)
 
-1. 이 브리핑 → [PRD.md](./PRD.md) 1–4절  
+정본은 [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) §6이다. 2026-08-28에 기록된 자동 검증과 아직 수동인 항목을 구분한다.
+
+| # | 수용 | 실행 | 현재 결과 |
+|---|------|------|-----------|
+| 1 | PG에 `session_profiles`/생년월일 컬럼 없음 | api pytest(스키마) | **통과** — 당시 47건 |
+| 2 | 입력 후 `/stats` · 최소 2스코프 | API POST 스모크 | **부분** — API 200. 브라우저 입력→허브는 수동 미실행 |
+| 3 | 스코프 「이전」→ `/stats` | 코드 `href="/stats"` | **통과**(코드). 브라우저 미실행 |
+| 4 | 입력 전 탭 비활성 | `AppHeader` `hasSession` | **통과**(코드). 브라우저 미실행 |
+| 5 | 실손 2열+, totalCount≠가입자 | `health-stats` 단위 | **통과** |
+| 6 | 스코프 AI/폴백, 생년월일 미전송 | `test_reports_api.py` | **통과** |
+| 7 | 상담 전 consultations 비어 있음 | `test_consultations_api.py` | **통과** |
+| 8 | 포털 다운이어도 캐시 200 | stats + seed | **통과** |
+| 9 | 동의 고지·이메일 only | api+web 단위 | **통과**(자동). 브라우저 폼 수동 미실행 |
+| 10 | 스코프 CTA | `OptionalActions` | **통과**(코드). 브라우저 미실행 |
+| 11 | `.env`/키 미커밋 | ignore·Compose 경계 | **통과** |
+| 12 | 고지·sessionStorage, “미수집” 없음 | web copy/session | **통과** |
+| 13 | D3 + 출처·견적 아님 | 차트 import | **통과**(코드). 브라우저 미실행 |
+
+당시 기록: api pytest **47**, worker **5**, web **27**·lint·production build. 개발 PC `docker stats`는 호스트 ~15GiB 맥락이며 **t4g.small 2GiB 실측이 아니다.**
+
+---
+
+## 9. 다음에 보면 좋은 것
+
+1. 이 보고서 → [PRD.md](./PRD.md) 1–4절  
 2. 기능·UAT → [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md)  
 3. 화면·차트 → [PUBLIC_API_PAGE_PLAN.md](./PUBLIC_API_PAGE_PLAN.md) §3, [DESIGN.md](./DESIGN.md)  
 4. DB → [ERD.md](./ERD.md) §0  
 5. 코드: `docker-compose.yml`, `apps/api/app/main.py`, `apps/api/app/models.py`  
-6. prod 기동 후 DB·캐시: [TECH_STACK.md](./TECH_STACK.md) §5.1.1
-7. EC2 HTTP 배포 명령: [TECH_STACK.md](./TECH_STACK.md) §5.1.2
+6. prod 기동 후 DB·캐시: [TECH_STACK.md](./TECH_STACK.md) §5.1.1  
+7. EC2 HTTP 명령: [TECH_STACK.md](./TECH_STACK.md) §5.1.2  
 
-배포 HTTPS는 B-5.
+**다음 작업:** B-5 HTTPS. 로컬 안정 기동이 필요하면 api/worker의 매 기동 pip 재설치는 별 Checkpoint(구현)로 다룬다.
 
----
+**잔여 위험:** 브라우저 수동 UAT. EC2 미실측. 크레딧·IPv4·EBS 30GB·송신 한도. SMTP 미설정 시 상담 알림 없음. 스코프 필터 UI 미구현.
 
-## 11. UAT 체크리스트 재검증 (FUNCTIONAL_SPEC §6)
-
-정본은 [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) §6이다. 아래는 2026-08-28에 실제 실행한 자동 검증·Compose 스모크와 아직 수동인 항목을 구분한다. GA4(F-10a)는 P0 선택이라 구현하지 않았다.
-
-기동:
-
-```powershell
-git check-ignore -v .env
-docker compose up
-# 다른 터미널 (호스트에 pytest가 있으면)
-cd apps/api; py -m pytest
-cd apps/web; npm test; npm run lint
-```
-
-| # | 수용 | 실행 | 현재 결과 |
-|---|------|------|-----------|
-| 1 | PG에 `session_profiles`/생년월일 컬럼 없음 | api 전체 pytest(스키마 포함) | **통과** — 47건 통과 |
-| 2 | 입력 후 `/stats` · 최소 2스코프 통계 | worker seed 후 nginx 경유 health·auto POST | **부분** — 두 API 200. 브라우저 입력→허브 클릭은 수동 미실행 |
-| 3 | 스코프 「이전」→ `/stats` | 브라우저 또는 코드 `href="/stats"` | **통과**(코드). 브라우저 미실행 |
-| 4 | 입력 전 탭 비활성, 세션 후 활성 | 브라우저; `AppHeader` `hasSession` | **통과**(코드). 브라우저 미실행 |
-| 5 | 실손 2열+, totalCount≠가입자 | `npm test` health-stats | **통과**(단위 테스트) |
-| 6 | 스코프 AI/폴백, 생년월일 미전송 | api `test_reports_api.py` 포함 전체 pytest | **통과** — Responses 요청/혼합 출력/4xx·JSON 오류·빈 출력·timeout 폴백 테스트 |
-| 7 | 상담 전 consultations 비어 있음 | api `test_consultations_api.py` 포함 전체 pytest | **통과** |
-| 8 | 포털 다운이어도 캐시 200 | api stats 테스트 + worker seed 후 nginx 스모크 | **통과** — 포털 비호출 seed 캐시에서 health·auto 200 |
-| 9 | 동의 고지·이메일 only·만료 삭제 | api 전체 pytest + web 테스트 | **통과**(자동). 브라우저 폼 수동 미실행 |
-| 10 | 스코프 CTA → `/documents`·`/consultations` | `OptionalActions` | **통과**(코드). 브라우저 미실행 |
-| 11 | `.env`/키 미커밋, 프론트 비밀 없음 | ignore·Compose env 경계·`NEXT_PUBLIC_` 검색 | **통과** — `.env` ignore, 포괄 `env_file` 없음, 서비스별 금지 변수 없음 |
-| 12 | 고지·sessionStorage, “미수집” 없음 | web copy/session 테스트 | **통과** — 익명 쿠키 목적·30분·프로필 미포함·초기화 경로 포함 |
-| 13 | D3 + 출처·기준·견적 아님 + KPI/표 | health/auto/life 차트 | **통과**(코드, `d3` import). 브라우저 미실행 |
-
-**실행 결과:** api pytest **47 통과**(Starlette/httpx deprecation 경고 3), worker pytest **5 통과**, web **27 통과**·lint·production build 통과. 개발/운영 Compose config 통과, 운영 이미지 build·기동·Alembic·worker `--seed` sync 성공. nginx 경유 `/`, `/stats`, `/api/health` 200. 통계 health·auto 200, 쿠키 재사용·`Max-Age=1800`·HttpOnly·SameSite=Lax·응답 생년월일 부재·쿼리 거절·초기화 204/만료를 확인했다.
-
-첫 nginx 스모크는 api/web 재생성 뒤 이전 upstream IP를 잡고 있어 502였고 nginx 재시작 후 통과했다. 첫 PowerShell 통계 본문은 문자 인코딩 오류로 422였으며 UTF-8 바이트 전송으로 고쳐 통과했다. 실패 결과를 통과로 계산하지 않았다.
-
-**리소스 스냅샷:** 2026-08-28 개발 PC `docker stats --no-stream`(이미 떠 있던 prod, **mem_limit 재생성 전**): postgres ~23MiB, redis ~5MiB, nginx ~15MiB, api ~64MiB, worker ~59MiB, web ~68MiB. LIMIT 열은 호스트 ~15GiB였다. 이는 2GiB t4g.small 실측이 아니고 PDF 피크·CPU credit 근거도 아니다. `mem_limit`은 compose config에 반영됐으나 실행 중 컨테이너 recreate는 이번 세션에서 승인되지 않아 적용 확인은 미실행이다.
-
-**남은 위험:** 브라우저 수동 UAT(#2–4, #9–10, #13). B-4 EC2 HTTP 실기동·`docker stats`(2GiB)는 사용자 실행 전 **미실측**. B-5 HTTPS에서 `Secure=true` 쿠키. AMI는 SSM 조회만(저장소에 ID 고정 없음). 크레딧·IPv4·EBS 30GB·송신 한도. 26.04는 기본값이 아니다. GA4(F-10a)는 구현하지 않았다.
+에이전트는 기능 단위가 끝나면 **STOP**하고, **commit/push는 사용자가 한다.**

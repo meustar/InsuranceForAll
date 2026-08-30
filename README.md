@@ -11,7 +11,7 @@
 
 | 순서 | 파일 | 역할 |
 |------|------|------|
-| — | [PROGRESS.md](./PROGRESS.md) | 기획~A-1 공유 브리핑 (계약 정본 아님) |
+| — | [PROGRESS.md](./PROGRESS.md) | 현재 상태 보고서 (계약 정본 아님). 충돌 시 아래 SSOT 우선 |
 | 1 | [PRD.md](./PRD.md) | 제품 정의·목표·비영속·여정 |
 | 2 | [FUNCTIONAL_SPEC.md](./FUNCTIONAL_SPEC.md) | F-ID · API · UAT |
 | 3 | [FLOWCHARTS.md](./FLOWCHARTS.md) | P0 흐름 |
@@ -43,11 +43,15 @@
 
 ## 로컬 기동 (A-12)
 
+`.env`가 **없을 때만** 템플릿을 복사한다. 이미 있으면 `Copy-Item`은 채운 값을 빈 `.env.example`로 덮어쓴다.
+
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 git check-ignore -v .env
 docker compose up
 ```
+
+`POSTGRES_USER`와 `POSTGRES_DB`는 비우지 않는다. 비면 postgres healthcheck가 `role "-d"`로 실패한다. 값·비밀번호는 채팅에 붙이지 않는다. 로컬 api/worker는 기동마다 PyPI에서 `pip install`하므로 네트워크 타임아웃이 나면 컨테이너가 죽을 수 있다. 상세는 [PROGRESS.md](./PROGRESS.md) §6 · [ENVIRONMENT.md](./ENVIRONMENT.md).
 
 브라우저: `http://localhost:3000` (web). 브라우저 API는 같은 출처 `/api/*`만 사용하며 Next rewrite가 api로 전달한다. `credentials: "include"`를 유지하고 CORS는 두지 않는다.
 `http://localhost:8000/health` 직접 호출은 호스트 curl·pytest 전용이다. 브라우저에서 `:8000`을 직접 호출하면 쿠키 origin이 달라 익명 산출물 세션이 깨질 수 있다. 프론트에 `NEXT_PUBLIC_*` 키를 두지 않는다.
@@ -57,7 +61,7 @@ docker compose up
 ## API 키 시작
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 git check-ignore -v .env
 ```
 
