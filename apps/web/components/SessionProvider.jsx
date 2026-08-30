@@ -18,22 +18,38 @@ export function SessionProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(() => {
-    const storage = typeof window === "undefined" ? null : window.sessionStorage;
-    setProfile(readStoredProfile(storage));
-    setReady(true);
+    try {
+      const storage = typeof window === "undefined" ? null : window.sessionStorage;
+      setProfile(readStoredProfile(storage));
+    } catch {
+      setProfile(null);
+    } finally {
+      setReady(true);
+    }
   }, []);
 
   useEffect(() => {
     let cancelled = false;
     let lastTouch = 0;
+    /**
+     * 세션 읽기 실패와 무관하게 ready를 올려 스코프가 대기 화면에 붙지 않게 한다.
+     */
     const hydrate = () => {
-      if (cancelled) {
-        return;
+      try {
+        if (!cancelled) {
+          setProfile(readStoredProfile(window.sessionStorage));
+        }
+      } catch {
+        if (!cancelled) {
+          setProfile(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setReady(true);
+        }
       }
-      setProfile(readStoredProfile(window.sessionStorage));
-      setReady(true);
     };
-    queueMicrotask(hydrate);
+    hydrate();
     const onActivity = (event) => {
       if (event.type === "visibilitychange" && document.visibilityState !== "visible") {
         refresh();

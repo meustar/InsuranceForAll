@@ -11,11 +11,12 @@ const TABS = [
 ];
 
 /**
- * 전 화면 공통 상단바. 세션 프로필이 있을 때만 스코프 탭을 연다.
+ * 전 화면 공통 상단바. ready 이후 세션이 있을 때만 스코프 탭을 연다.
  */
 export function AppHeader() {
   const pathname = usePathname();
-  const { hasSession } = useSessionProfile();
+  const { ready, hasSession } = useSessionProfile();
+  const tabsOpen = ready && hasSession;
 
   return (
     <header className="h-16 shrink-0 border-b border-border bg-surface">
@@ -29,7 +30,7 @@ export function AppHeader() {
         <nav className="ml-8 flex gap-6" aria-label="통계 스코프">
           {TABS.map((tab) => {
             const active = pathname === tab.href;
-            if (!hasSession) {
+            if (!tabsOpen) {
               return (
                 <span
                   key={tab.href}

@@ -33,9 +33,22 @@ export function ProfileForm() {
     }));
   }
 
+  /**
+   * React 상태가 비어도 제출 값으로 저장한다. GET query에는 쓰지 않는다.
+   */
+  function fieldsFromSubmit(event) {
+    const submitted = new FormData(event.currentTarget);
+    return {
+      birthDate: form.birthDate || String(submitted.get("birthDate") || ""),
+      sex: form.sex || String(submitted.get("sex") || ""),
+      areaNm: form.areaNm || String(submitted.get("areaNm") || ""),
+    };
+  }
+
   function onSubmit(event) {
     event.preventDefault();
-    const result = save(form);
+    event.stopPropagation();
+    const result = save(fieldsFromSubmit(event));
     if (!result.ok) {
       setError(result.message);
       return;
@@ -63,7 +76,13 @@ export function ProfileForm() {
         </div>
       </aside>
 
-      <form className="mt-8 space-y-6" onSubmit={onSubmit} noValidate>
+      <form
+        className="mt-8 space-y-6"
+        method="post"
+        action="/stats"
+        onSubmit={onSubmit}
+        noValidate
+      >
         <div>
           <label htmlFor="birthDate" className="block text-[14px] font-medium text-ink">
             생년월일

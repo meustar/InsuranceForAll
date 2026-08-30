@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { insuranceAge, parseCivilDate } from "./insurance-age.js";
+import { insuranceAge, parseCivilDate, seoulToday } from "./insurance-age.js";
 
 function d(iso) {
   return parseCivilDate(iso);
@@ -21,5 +21,11 @@ describe("insuranceAge", () => {
 
   it("rejects a birth after as-of", () => {
     assert.throws(() => insuranceAge(d("2030-01-01"), d("2026-08-26")), /future_birth/);
+  });
+});
+
+describe("seoulToday", () => {
+  it("returns null instead of throwing when the clock cannot be read", () => {
+    assert.equal(seoulToday(new Date(Number.NaN)), null);
   });
 });

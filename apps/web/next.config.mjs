@@ -8,6 +8,10 @@ const apiInternalUrl = (process.env.API_INTERNAL_URL || "http://localhost:8000")
 const nextConfig = {
   typedRoutes: false,
   outputFileTracingRoot: repoRoot,
+  /**
+   * 로컬 UAT가 127.0.0.1로 열리면 청크가 막혀 onSubmit이 없고 생년월일이 GET query로 샌다.
+   */
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   turbopack: {
     root: repoRoot,
   },

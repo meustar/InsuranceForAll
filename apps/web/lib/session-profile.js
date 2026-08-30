@@ -15,7 +15,12 @@ export function validateProfileFields({ birthDate, sex, areaNm }) {
   if (birth.year < 1900) {
     return { ok: false, message: "생년월일이 허용 범위를 벗어났습니다." };
   }
-  const today = seoulToday();
+  let today = null;
+  try {
+    today = seoulToday();
+  } catch {
+    today = null;
+  }
   if (today && !civilLte(birth, today)) {
     return { ok: false, message: "생년월일은 오늘 이전이어야 합니다." };
   }
@@ -75,11 +80,17 @@ export function readStoredProfile(storage, nowMs = Date.now()) {
     clearStoredProfile(storage);
     return null;
   }
-  const checked = validateProfileFields({
-    birthDate: parsed.birthDate,
-    sex: parsed.sex,
-    areaNm: parsed.areaNm,
-  });
+  let checked;
+  try {
+    checked = validateProfileFields({
+      birthDate: parsed.birthDate,
+      sex: parsed.sex,
+      areaNm: parsed.areaNm,
+    });
+  } catch {
+    clearStoredProfile(storage);
+    return null;
+  }
   if (!checked.ok) {
     clearStoredProfile(storage);
     return null;

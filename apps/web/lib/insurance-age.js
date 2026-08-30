@@ -50,14 +50,18 @@ export function formatCivilDate(civil) {
  * 브라우저 현재 시각을 Asia/Seoul 달력일로 본다.
  */
 export function seoulToday(now = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(now);
-  const get = (type) => parts.find((part) => part.type === type)?.value;
-  return parseCivilDate(`${get("year")}-${get("month")}-${get("day")}`);
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(now);
+    const get = (type) => parts.find((part) => part.type === type)?.value;
+    return parseCivilDate(`${get("year")}-${get("month")}-${get("day")}`);
+  } catch {
+    return null;
+  }
 }
 
 export function addCalendarMonths(value, months) {
