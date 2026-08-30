@@ -80,9 +80,13 @@ describe("health stats normalization", () => {
     };
     const viewModel = buildHealthViewModel(payload);
     assert.equal(viewModel.productCount, 12);
-    const displayed = buildDisplayedHealthStats(payload, viewModel);
+    const displayed = buildDisplayedHealthStats(payload, viewModel, { ptrn: "유형A" });
     const encoded = JSON.stringify(displayed);
+    assert.equal(displayed.highlights.applied_filters.ptrn, "유형A");
     assert.equal(encoded.includes("birth"), false);
+    assert.equal(encoded.includes("area_nm"), false);
+    assert.equal(encoded.includes("insurance_age"), false);
+    assert.equal(displayed.row_count, 12);
     assert.equal(encoded.includes("area_nm"), false);
     assert.equal(encoded.includes("insurance_age"), false);
     assert.equal(displayed.row_count, 12);

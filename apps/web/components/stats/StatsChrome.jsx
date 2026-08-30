@@ -103,3 +103,36 @@ export function BackToHubLink() {
     </Link>
   );
 }
+
+/**
+ * 해당 스코프 캐시에서 고른 선택 필터만 보여 준다. 값은 URL이 아니라 POST 본문으로 보낸다.
+ */
+export function ScopeFilterBar({ legend, fields }) {
+  return (
+    <fieldset className="mt-6 rounded-[12px] border border-border bg-surface p-5 shadow-[var(--shadow-card)]">
+      <legend className="px-1 text-[16px] font-semibold text-ink">{legend}</legend>
+      <div className="mt-4 flex flex-wrap gap-4">
+        {fields.map((field) => (
+          <div key={field.id}>
+            <label htmlFor={field.id} className="block text-[14px] font-medium text-ink">
+              {field.label}
+            </label>
+            <select
+              id={field.id}
+              value={field.value}
+              onChange={(event) => field.onChange(event.target.value)}
+              className="mt-2 min-h-12 min-w-[12rem] rounded-[10px] border border-border bg-surface px-3 text-[16px] text-ink"
+            >
+              <option value="">전체</option>
+              {field.options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  );
+}

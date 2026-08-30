@@ -12,9 +12,9 @@ export async function readApiError(response, fallback) {
 }
 
 /**
- * 세션 프로필을 JSON 본문으로만 보낸다. 쿼리 문자열은 쓰지 않는다.
+ * 세션 프로필과 스코프 선택 필터를 JSON 본문으로만 보낸다. 쿼리 문자열은 쓰지 않는다.
  */
-export async function postScopeStats(scope, profile, signal) {
+export async function postScopeStats(scope, profile, signal, filters = {}) {
   const response = await fetch(`/api/v1/stats/${scope}`, {
     method: "POST",
     credentials: "include",
@@ -24,6 +24,7 @@ export async function postScopeStats(scope, profile, signal) {
       birthDate: profile.birthDate,
       sex: profile.sex,
       areaNm: profile.areaNm,
+      ...filters,
     }),
     signal,
   });

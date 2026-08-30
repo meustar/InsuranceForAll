@@ -55,8 +55,11 @@ describe("auto stats normalization", () => {
       as_of_date: "2026-08-26",
       truncated: false,
     };
-    const displayed = buildDisplayedAutoStats(payload, buildAutoViewModel(payload));
+    const displayed = buildDisplayedAutoStats(payload, buildAutoViewModel(payload), {
+      mogClsfNm: "대인",
+    });
     const encoded = JSON.stringify(displayed);
+    assert.equal(displayed.highlights.applied_filters.mogClsfNm, "대인");
     assert.equal(encoded.includes("birth"), false);
     assert.equal(encoded.includes("area_nm"), false);
     assert.equal(encoded.includes("insurance_age"), false);

@@ -9,6 +9,7 @@ import {
   ExplanationBlock,
   KpiCard,
   OptionalActions,
+  ScopeFilterBar,
   StatusPanel,
 } from "../stats/StatsChrome";
 import { useSessionProfile } from "../SessionProvider";
@@ -21,6 +22,7 @@ import {
   formatJoinCount,
   formatJoinRate,
 } from "../../lib/life-stats";
+import { compactStatsFilters, uniqueFieldValues } from "../../lib/scope-filters";
 import { loadExplanation, postScopeStats } from "../../lib/stats-client";
 
 const SOURCE_LABEL = "금융위원회 공공데이터 생명보험가입정보";
@@ -33,8 +35,37 @@ export function LifeStatsPage() {
   const birthDate = profile?.birthDate;
   const sex = profile?.sex;
   const areaNm = profile?.areaNm;
+  const [isuKindNm, setIsuKindNm] = useState("");
+  const [sttsAccmlTrgtYr, setSttsAccmlTrgtYr] = useState("");
+  const [catalog, setCatalog] = useState({ isuKindNm: [], sttsAccmlTrgtYr: [] });
   const [state, setState] = useState({ status: "idle", payload: null, message: "" });
   const [report, setReport] = useState({ status: "idle", markdown: "", fallback: false });
+  const appliedFilters = useMemo(
+    () => compactStatsFilters({ isuKindNm, sttsAccmlTrgtYr }),
+    [isuKindNm, sttsAccmlTrgtYr],
+  );
+
+  useEffect(() => {
+    if (!ready || !birthDate || !sex || !areaNm) {
+      return;
+    }
+    const controller = new AbortController();
+    const loadCatalog = async () => {
+      try {
+        const payload = await postScopeStats("life", { birthDate, sex, areaNm }, controller.signal);
+        setCatalog({
+          isuKindNm: uniqueFieldValues(payload.rows, "isu_kind_nm"),
+          sttsAccmlTrgtYr: uniqueFieldValues(payload.rows, "stts_accml_trgt_yr"),
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setCatalog({ isuKindNm: [], sttsAccmlTrgtYr: [] });
+        }
+      }
+    };
+    loadCatalog();
+    return () => controller.abort();
+  }, [ready, birthDate, sex, areaNm]);
 
   useEffect(() => {
     if (!ready || !birthDate || !sex || !areaNm) {
@@ -45,7 +76,12 @@ export function LifeStatsPage() {
       setState({ status: "loading", payload: null, message: "" });
       setReport({ status: "idle", markdown: "", fallback: false });
       try {
-        const payload = await postScopeStats("life", { birthDate, sex, areaNm }, controller.signal);
+        const payload = await postScopeStats(
+          "life",
+          { birthDate, sex, areaNm },
+          controller.signal,
+          appliedFilters,
+        );
         setState({ status: "success", payload, message: "" });
         const viewModel = buildLifeViewModel(payload);
         if (viewModel.rows.length === 0) {
@@ -55,7 +91,7 @@ export function LifeStatsPage() {
         try {
           const result = await loadExplanation(
             "life",
-            buildDisplayedLifeStats(payload, viewModel),
+            buildDisplayedLifeStats(payload, viewModel, appliedFilters),
             controller.signal,
           );
           setReport({
@@ -80,7 +116,7 @@ export function LifeStatsPage() {
     };
     load();
     return () => controller.abort();
-  }, [ready, birthDate, sex, areaNm]);
+  }, [ready, birthDate, sex, areaNm, appliedFilters]);
 
   const viewModel = useMemo(
     () => (state.payload ? buildLifeViewModel(state.payload) : null),
@@ -112,6 +148,25 @@ export function LifeStatsPage() {
         같은 연령·성별·지역의 보험종류별 가입건수와 가입율을 공공 통계로 살펴봅니다. 가입건수는 건
         단위이며 사람 수가 아닙니다.
       </p>
+      <ScopeFilterBar
+        legend="생명 종류·연도"
+        fields={[
+          {
+            id: "life-kind",
+            label: "보험종류",
+            value: isuKindNm,
+            options: catalog.isuKindNm,
+            onChange: setIsuKindNm,
+          },
+          {
+            id: "life-year",
+            label: "기준연도",
+            value: sttsAccmlTrgtYr,
+            options: catalog.sttsAccmlTrgtYr,
+            onChange: setSttsAccmlTrgtYr,
+          },
+        ]}
+      />
 
       {state.status === "loading" || state.status === "idle" ? (
         <StatusPanel message="생명 통계를 불러오는 중입니다." />

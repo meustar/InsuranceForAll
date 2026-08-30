@@ -9,6 +9,7 @@ import {
   ExplanationBlock,
   KpiCard,
   OptionalActions,
+  ScopeFilterBar,
   StatusPanel,
 } from "../stats/StatsChrome";
 import { useSessionProfile } from "../SessionProvider";
@@ -20,6 +21,7 @@ import {
   formatWon,
 } from "../../lib/auto-stats";
 import { formatBasePeriod } from "../../lib/health-stats";
+import { compactStatsFilters, uniqueFieldValues } from "../../lib/scope-filters";
 import { loadExplanation, postScopeStats } from "../../lib/stats-client";
 
 const SOURCE_LABEL = "금융위원회 공공데이터 자동차보험가입정보";
@@ -32,8 +34,44 @@ export function AutoStatsPage() {
   const birthDate = profile?.birthDate;
   const sex = profile?.sex;
   const areaNm = profile?.areaNm;
+  const [isuItmsNm, setIsuItmsNm] = useState("");
+  const [mogClsfNm, setMogClsfNm] = useState("");
+  const [kncrNm, setKncrNm] = useState("");
+  const [catalog, setCatalog] = useState({ isuItmsNm: [], mogClsfNm: [], kncrNm: [] });
   const [state, setState] = useState({ status: "idle", payload: null, message: "" });
   const [report, setReport] = useState({ status: "idle", markdown: "", fallback: false });
+  const appliedFilters = useMemo(
+    () =>
+      compactStatsFilters({
+        isuItmsNm,
+        mogClsfNm,
+        kncrNm,
+      }),
+    [isuItmsNm, mogClsfNm, kncrNm],
+  );
+
+  useEffect(() => {
+    if (!ready || !birthDate || !sex || !areaNm) {
+      return;
+    }
+    const controller = new AbortController();
+    const loadCatalog = async () => {
+      try {
+        const payload = await postScopeStats("auto", { birthDate, sex, areaNm }, controller.signal);
+        setCatalog({
+          isuItmsNm: uniqueFieldValues(payload.rows, "isu_itms_nm"),
+          mogClsfNm: uniqueFieldValues(payload.rows, "mog_clsf_nm"),
+          kncrNm: uniqueFieldValues(payload.rows, "kncr_nm"),
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setCatalog({ isuItmsNm: [], mogClsfNm: [], kncrNm: [] });
+        }
+      }
+    };
+    loadCatalog();
+    return () => controller.abort();
+  }, [ready, birthDate, sex, areaNm]);
 
   useEffect(() => {
     if (!ready || !birthDate || !sex || !areaNm) {
@@ -44,7 +82,12 @@ export function AutoStatsPage() {
       setState({ status: "loading", payload: null, message: "" });
       setReport({ status: "idle", markdown: "", fallback: false });
       try {
-        const payload = await postScopeStats("auto", { birthDate, sex, areaNm }, controller.signal);
+        const payload = await postScopeStats(
+          "auto",
+          { birthDate, sex, areaNm },
+          controller.signal,
+          appliedFilters,
+        );
         setState({ status: "success", payload, message: "" });
         const viewModel = buildAutoViewModel(payload);
         if (viewModel.rows.length === 0) {
@@ -54,7 +97,7 @@ export function AutoStatsPage() {
         try {
           const result = await loadExplanation(
             "auto",
-            buildDisplayedAutoStats(payload, viewModel),
+            buildDisplayedAutoStats(payload, viewModel, appliedFilters),
             controller.signal,
           );
           setReport({
@@ -79,7 +122,7 @@ export function AutoStatsPage() {
     };
     load();
     return () => controller.abort();
-  }, [ready, birthDate, sex, areaNm]);
+  }, [ready, birthDate, sex, areaNm, appliedFilters]);
 
   const viewModel = useMemo(
     () => (state.payload ? buildAutoViewModel(state.payload) : null),
@@ -110,6 +153,32 @@ export function AutoStatsPage() {
       <p className="mt-3 text-base leading-6 text-ink-muted">
         나와 비슷한 조건의 가입대수와 집계 보험료를 공공 통계로 살펴봅니다. 견적이 아닙니다.
       </p>
+      <ScopeFilterBar
+        legend="자동차 종목·담보·차종"
+        fields={[
+          {
+            id: "auto-item",
+            label: "종목",
+            value: isuItmsNm,
+            options: catalog.isuItmsNm,
+            onChange: setIsuItmsNm,
+          },
+          {
+            id: "auto-coverage",
+            label: "담보",
+            value: mogClsfNm,
+            options: catalog.mogClsfNm,
+            onChange: setMogClsfNm,
+          },
+          {
+            id: "auto-car-type",
+            label: "차종",
+            value: kncrNm,
+            options: catalog.kncrNm,
+            onChange: setKncrNm,
+          },
+        ]}
+      />
 
       {state.status === "loading" || state.status === "idle" ? (
         <StatusPanel message="자동차 통계를 불러오는 중입니다." />

@@ -8,51 +8,13 @@ import {
   formatBasePeriod,
   formatWon,
 } from "../../lib/health-stats";
+import { compactStatsFilters, uniqueFieldValues } from "../../lib/scope-filters";
+import { loadExplanation, postScopeStats } from "../../lib/stats-client";
 import { useSessionProfile } from "../SessionProvider";
+import { ScopeFilterBar } from "../stats/StatsChrome";
 import { BoxSummaryChart, DumbbellChart, HorizontalBarChart } from "./HealthCharts";
 
 const SOURCE_LABEL = "금융위원회 공공데이터 실손보험정보";
-
-async function readApiError(response, fallback) {
-  try {
-    const body = await response.json();
-    return typeof body.detail === "string" ? body.detail : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-/**
- * 화면 집계만 리포트 API에 전달하고 일회성 토큰은 함수 메모리에서 바로 소진한다.
- */
-async function loadExplanation(displayedStats, signal) {
-  const created = await fetch("/api/v1/reports", {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ scope: "health", displayedStats }),
-    signal,
-  });
-  if (!created.ok) {
-    throw new Error("설명을 만들지 못했습니다.");
-  }
-  const { report_id: reportId, access_token: accessToken } = await created.json();
-  if (!reportId || !accessToken) {
-    throw new Error("설명 응답이 올바르지 않습니다.");
-  }
-  const report = await fetch(`/api/v1/reports/${encodeURIComponent(reportId)}`, {
-    method: "GET",
-    credentials: "include",
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${accessToken}` },
-    signal,
-  });
-  if (!report.ok) {
-    throw new Error("설명을 불러오지 못했습니다.");
-  }
-  return report.json();
-}
 
 /**
  * 실손 캐시 통계를 불러와 KPI·표·D3 차트와 하단 설명을 한 화면에 제공한다.
@@ -62,8 +24,34 @@ export function HealthStatsPage() {
   const birthDate = profile?.birthDate;
   const sex = profile?.sex;
   const areaNm = profile?.areaNm;
+  const [ptrn, setPtrn] = useState("");
+  const [mog, setMog] = useState("");
+  const [catalog, setCatalog] = useState({ ptrn: [], mog: [] });
   const [state, setState] = useState({ status: "idle", payload: null, message: "" });
   const [report, setReport] = useState({ status: "idle", markdown: "", fallback: false });
+  const appliedFilters = useMemo(() => compactStatsFilters({ ptrn, mog }), [ptrn, mog]);
+
+  useEffect(() => {
+    if (!ready || !birthDate || !sex || !areaNm) {
+      return;
+    }
+    const controller = new AbortController();
+    const loadCatalog = async () => {
+      try {
+        const payload = await postScopeStats("health", { birthDate, sex, areaNm }, controller.signal);
+        setCatalog({
+          ptrn: uniqueFieldValues(payload.rows, "ptrn"),
+          mog: uniqueFieldValues(payload.rows, "mog"),
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setCatalog({ ptrn: [], mog: [] });
+        }
+      }
+    };
+    loadCatalog();
+    return () => controller.abort();
+  }, [ready, birthDate, sex, areaNm]);
 
   useEffect(() => {
     if (!ready || !birthDate || !sex || !areaNm) {
@@ -74,18 +62,12 @@ export function HealthStatsPage() {
       setState({ status: "loading", payload: null, message: "" });
       setReport({ status: "idle", markdown: "", fallback: false });
       try {
-        const response = await fetch("/api/v1/stats/health", {
-          method: "POST",
-          credentials: "include",
-          cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ birthDate, sex, areaNm }),
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          throw new Error(await readApiError(response, "실손 통계를 불러오지 못했습니다."));
-        }
-        const payload = await response.json();
+        const payload = await postScopeStats(
+          "health",
+          { birthDate, sex, areaNm },
+          controller.signal,
+          appliedFilters,
+        );
         setState({ status: "success", payload, message: "" });
         const viewModel = buildHealthViewModel(payload);
         if (viewModel.rows.length === 0) {
@@ -94,7 +76,8 @@ export function HealthStatsPage() {
         setReport({ status: "loading", markdown: "", fallback: false });
         try {
           const result = await loadExplanation(
-            buildDisplayedHealthStats(payload, viewModel),
+            "health",
+            buildDisplayedHealthStats(payload, viewModel, appliedFilters),
             controller.signal,
           );
           setReport({
@@ -119,7 +102,7 @@ export function HealthStatsPage() {
     };
     load();
     return () => controller.abort();
-  }, [ready, birthDate, sex, areaNm]);
+  }, [ready, birthDate, sex, areaNm, appliedFilters]);
 
   const viewModel = useMemo(
     () => (state.payload ? buildHealthViewModel(state.payload) : null),
@@ -152,6 +135,25 @@ export function HealthStatsPage() {
       <p className="mt-3 text-base leading-6 text-ink-muted">
         같은 보험나이의 상품 보험료와 남녀 차이, 분포를 공공 통계로 살펴봅니다.
       </p>
+      <ScopeFilterBar
+        legend="실손 유형·담보"
+        fields={[
+          {
+            id: "health-ptrn",
+            label: "유형",
+            value: ptrn,
+            options: catalog.ptrn,
+            onChange: setPtrn,
+          },
+          {
+            id: "health-mog",
+            label: "담보",
+            value: mog,
+            options: catalog.mog,
+            onChange: setMog,
+          },
+        ]}
+      />
 
       {state.status === "loading" || state.status === "idle" ? (
         <StatusPanel message="실손 통계를 불러오는 중입니다." />

@@ -114,9 +114,9 @@ export function buildHealthViewModel(payload) {
 }
 
 /**
- * AI에는 화면에 표시한 집계·시리즈만 넣고 세션 프로필 원문은 제외한다.
+ * AI에는 화면에 표시한 집계·시리즈·필터 라벨만 넣고 세션 프로필 원문은 제외한다.
  */
-export function buildDisplayedHealthStats(payload, viewModel) {
+export function buildDisplayedHealthStats(payload, viewModel, appliedFilters = {}) {
   return {
     scope: "health",
     stale: Boolean(payload.stale),
@@ -131,6 +131,7 @@ export function buildDisplayedHealthStats(payload, viewModel) {
       selected_sex: viewModel.sex,
       median_won: viewModel.distribution?.median ?? null,
       displayed_records: viewModel.displayedCount,
+      applied_filters: appliedFilters,
     },
     series: {
       selected_sex_rates_won: viewModel.barSeries,

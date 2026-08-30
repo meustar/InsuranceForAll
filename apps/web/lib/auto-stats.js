@@ -94,7 +94,7 @@ export function buildAutoViewModel(payload) {
 /**
  * AI에는 화면에 표시한 대수·경과보험료 집계만 넣고 프로필 원문은 제외한다.
  */
-export function buildDisplayedAutoStats(payload, viewModel) {
+export function buildDisplayedAutoStats(payload, viewModel, appliedFilters = {}) {
   return {
     scope: "auto",
     stale: Boolean(payload.stale),
@@ -111,6 +111,7 @@ export function buildDisplayedAutoStats(payload, viewModel) {
       elps_inpm_sum: viewModel.totalPremium,
       average_elps_per_join: viewModel.perVehicle,
       isu_cmpy_ofr_ym: viewModel.period,
+      applied_filters: appliedFilters,
     },
     series: {
       join_cnt: viewModel.joinSeries,

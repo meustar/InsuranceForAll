@@ -57,7 +57,9 @@ describe("life stats normalization", () => {
       as_of_date: "2026-08-26",
       truncated: false,
     };
-    const displayed = buildDisplayedLifeStats(payload, buildLifeViewModel(payload));
+    const displayed = buildDisplayedLifeStats(payload, buildLifeViewModel(payload), {
+      isuKindNm: "종신",
+    });
     const encoded = JSON.stringify(displayed);
     assert.equal(encoded.includes("birth"), false);
     assert.equal(encoded.includes("area_nm"), false);

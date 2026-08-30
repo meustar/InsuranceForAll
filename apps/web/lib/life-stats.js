@@ -65,7 +65,7 @@ export function buildLifeViewModel(payload) {
 /**
  * AI에는 종류별 건수·가입율만 넣고 세션 프로필 원문은 제외한다.
  */
-export function buildDisplayedLifeStats(payload, viewModel) {
+export function buildDisplayedLifeStats(payload, viewModel, appliedFilters = {}) {
   return {
     scope: "life",
     stale: Boolean(payload.stale),
@@ -80,6 +80,7 @@ export function buildDisplayedLifeStats(payload, viewModel) {
       join_cnt_sum_geon: viewModel.totalJoin,
       displayed_kinds: viewModel.tableRows.length,
       stts_accml_trgt_yr: viewModel.year,
+      applied_filters: appliedFilters,
     },
     series: {
       join_rto_percent: viewModel.rateSeries,
