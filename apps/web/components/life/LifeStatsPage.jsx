@@ -22,7 +22,7 @@ import {
   formatJoinCount,
   formatJoinRate,
 } from "../../lib/life-stats";
-import { compactStatsFilters, uniqueFieldValues } from "../../lib/scope-filters";
+import { compactStatsFilters, uniqueFieldValues } from "@/lib/scope-filters";
 import { loadExplanation, postScopeStats } from "../../lib/stats-client";
 
 const SOURCE_LABEL = "금융위원회 공공데이터 생명보험가입정보";

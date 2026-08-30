@@ -8,7 +8,7 @@ import {
   formatBasePeriod,
   formatWon,
 } from "../../lib/health-stats";
-import { compactStatsFilters, uniqueFieldValues } from "../../lib/scope-filters";
+import { compactStatsFilters, uniqueFieldValues } from "@/lib/scope-filters";
 import { loadExplanation, postScopeStats } from "../../lib/stats-client";
 import { useSessionProfile } from "../SessionProvider";
 import {

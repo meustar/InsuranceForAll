@@ -21,7 +21,7 @@ import {
   formatWon,
 } from "../../lib/auto-stats";
 import { formatBasePeriod } from "../../lib/health-stats";
-import { compactStatsFilters, uniqueFieldValues } from "../../lib/scope-filters";
+import { compactStatsFilters, uniqueFieldValues } from "@/lib/scope-filters";
 import { loadExplanation, postScopeStats } from "../../lib/stats-client";
 
 const SOURCE_LABEL = "금융위원회 공공데이터 자동차보험가입정보";
