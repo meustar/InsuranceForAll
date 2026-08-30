@@ -43,6 +43,10 @@ class ApiSettings(BaseSettings):
     session_cookie_secure: bool = False
     document_staging_dir: str = "/var/ifa/staging"
 
+    admin_username: str = ""
+    admin_password: SecretStr = Field(default=SecretStr(""))
+    admin_session_pepper: SecretStr = Field(default=SecretStr(""))
+
 
 @lru_cache
 def get_settings() -> ApiSettings:

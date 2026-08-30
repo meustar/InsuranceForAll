@@ -59,6 +59,7 @@ describe("user-facing copy", () => {
     const life = readFileSync(join(root, "../components/life/LifeStatsPage.jsx"), "utf8");
     assert.equal(header.includes("Sign In"), false);
     assert.equal(header.includes("로그인"), false);
+    assert.equal(header.includes("/ops"), false);
     assert.equal(hub.includes("ScopeCrossNav"), false);
     assert.match(health, /ScopeCrossNav current="health"/);
     assert.match(auto, /ScopeCrossNav current="auto"/);

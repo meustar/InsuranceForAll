@@ -25,7 +25,7 @@ Stitch 프로젝트는 **페이지 IA·카드·차트 자리·톤**의 골격으
 
 | Stitch에 있을 수 있음 (채택 안 함) | 구현·정본 (§5–§6) |
 |-----------------------------------|-------------------|
-| 햄버거 메뉴, Export, Sign In | **없음** — 로그인·관리자 UI 없음 |
+| 햄버거 메뉴, Export, Sign In | **사용자 앱에 없음** — 운영 로그인은 `/ops`만 |
 | Header 우측 계정·설정 슬롯 | **RIGHT EMPTY** |
 | 화면마다 다른 primary/secondary 버튼 radius | Primary **12px** · Secondary **10px** · 높이 **48/44px** |
 | 카드 하단 보조 링크가 primary처럼 보임 | **Caption 13px** + `color.text-secondary` · primary와 동급 solid 금지 |
@@ -52,7 +52,7 @@ Stitch 프로젝트는 **페이지 IA·카드·차트 자리·톤**의 골격으
 | 한 줄 목적 | 공공 통계 기반 **보험 의사결정 지원**. 견적·모집·비교추천·청약·로그인 없음 |
 | Vibe adjectives | calm, trustworthy, institutional, minimalist, clear, educational |
 | UI 언어 | **한국어** |
-| 계정 | **로그인·아바타·내 정보·회원가입 없음**. 관리자 로그인은 사용자 Header에 두지 않는다(P1 별 표면) |
+| 계정 | **사용자 앱에 로그인·아바타·내 정보·회원가입 없음**. 운영 로그인은 Header에 두지 않고 `/ops`·`/ops/login`만 쓴다 |
 
 **피하기:** purple neon AI 클리셰, dark cyberpunk, 이모지 남발, 하단탭(홈/추천/내정보), 장식용 대시보드, 크림+테라코타 기본 AI 테마.
 
@@ -173,9 +173,10 @@ Stitch 프로젝트는 **페이지 IA·카드·차트 자리·톤**의 골격으
 - Tab 15px, gap 24px; active = navy + 2px underline
 - Main(세션 전): tabs **disabled** look
 - Hub/scope(세션 후): tabs enabled
-- **금지:** 우측 아바타·로그인·계정·Header 안 “입력 수정”
+- **금지:** 우측 아바타·로그인·계정·Header 안 “입력 수정” · `/ops` 링크
+- 운영 표면(`/ops`): 브랜드 「모두의 보험 운영」·로그아웃. 실손/자동차/생명 탭·세션 칩 없음
 
-**근거:** 로그인 없는 세션 제품(`PRD` G8). 계정 슬롯은 오해(회원제)를 만든다.
+**근거:** 로그인 없는 세션 제품(`PRD` G8). 계정 슬롯은 오해(회원제)를 만든다. 운영은 별 라우트(`FUNCTIONAL_SPEC` F-09·F-10).
 
 ### 5.2 Session chips (Hub + scope only)
 
@@ -316,7 +317,7 @@ Filters (identity 아님): health `보험유형`/`담보` · auto `종목`/`담�
 | CTA 48px · hit ≥44 | WCAG 2.2 · Fitts’s law |
 | Primary 1개/화면 | 선택 과부하 감소 |
 | Header/Footer 기하 통일 | 학습 비용 ↓ · 탭만 다르게 |
-| 로그인 UI 없음 | 계정·PG 프로필 없음 |
+| 로그인 UI 없음(사용자 Header) | 계정·PG 프로필 없음. 운영은 `/ops` |
 | 허브 후 자유 탭 | 세 API KPI 독립 · 선형 강제 폐기 |
 | 「이전」→ 허브 | 스코프는 허브의 자식 |
 | KPI→차트→AI→선택 CTA | 숫자 근거 먼저, 연락은 별도 페이지·동의 후 |

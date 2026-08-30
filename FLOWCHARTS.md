@@ -12,7 +12,7 @@
 ## 1. MVP 필수 Flow (P0)
 
 포함: F-01~F-08, F-11.  
-제외: F-09, F-10 UI, F-12, F-13.
+제외: 사용자 여정의 F-09·F-10(별 라우트 `/ops`), F-12, F-13.
 
 ```mermaid
 flowchart TD
@@ -153,17 +153,21 @@ flowchart TD
     F08 --> F13
   end
 
-  subgraph ADMIN["관리자 P1"]
-    F09[다건 PDF]
+  subgraph ADMIN["운영 /ops"]
+    LOGIN["/ops/login"]
     F10[대시보드]
+    F09[다건 PDF]
     SYNC[수동 동기화]
+    LOGIN --> F10
+    F10 --> F09
+    F10 --> SYNC
   end
 ```
 
 ### 2-2 ~ 2-3
 
 관리자·파싱 수정·설계사 디렉터리 — 기존 P1/P2 취지 유지 (데모 제외).  
-관리자(F-09·F-10)는 사용자 `/` Header와 **다른 호스트/라우트**다. 사용자 Sign In을 넣지 않는다. 상담 암호문 복호화 열람은 F-10. F-10a GA4는 선택 P0·미구현이며 생년월일·연락처·토큰을 보내지 않고 사용자 로그인과 섞지 않는다. F-12·F-13은 P1/P2.
+관리자(F-09·F-10)는 **`/ops` · `/ops/login`** 이며 사용자 `/` Header와 분리한다. 사용자 Sign In을 넣지 않는다. HMAC 쿠키 `ifa_ops`(JWT 아님). 상담 암호문 복호화 열람은 F-10. F-10a GA4는 선택 P0·**미구현**(허용 이벤트 목록 없음)이며 생년월일·연락처·토큰을 보내지 않는다. F-12·F-13은 P1/P2.
 
 ---
 
@@ -178,6 +182,6 @@ flowchart TD
 | 생명 탭+AI | F-03, F-07 | `/stats/life` · D3 |
 | PDF 진행 | F-05, F-06 | 선택 · 허브/공통 하단 |
 | 상담 | F-08 | 선택 |
-| 관리자 | | P1 |
+| 관리자 | `/ops` | F-09, F-10. 로그인 `/ops/login` |
 
 v0: **JavaScript only**, Next App Router, Tailwind, **D3.js** — [TECH_STACK.md](./TECH_STACK.md).

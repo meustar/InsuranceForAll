@@ -24,6 +24,6 @@ def encrypt_field(secret: str, plaintext: str) -> bytes:
 
 
 def decrypt_field(secret: str, blob: bytes) -> str:
-    """테스트·만료 정리 외 경로에서는 쓰지 않는다."""
+    """운영 대시보드·테스트에서만 복호화한다. 로그에 평문을 남기지 않는다."""
     nonce, token = blob[:_NONCE_LEN], blob[_NONCE_LEN:]
     return _aesgcm(secret).decrypt(nonce, token, _AAD).decode("utf-8")

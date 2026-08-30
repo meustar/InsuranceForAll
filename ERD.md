@@ -35,6 +35,7 @@ v1.2–1.3 ERD의 `session_profiles`에 `birth_date` 등을 둔 것은 **이 원
 - 생년월일, 성별, 지역
 - 직업·유병력은 P0에서 아예 수집하지 않음
 - 보험나이·연령대 (매 요청 `asOfDate`로 계산)
+- 운영자 계정·비밀번호 (환경변수만. `admins` 테이블 없음)
 
 ### 0.3 런타임 모델 (프로필)
 
@@ -194,9 +195,10 @@ erDiagram
 | uploaded_documents | masked_coverages | 1:0..1 |
 | uploaded_documents | ai_reports | 0..1:N |
 
-**없음:** `session_profiles`, 프로필 → 통계 FK, 생년월일 컬럼.
+**없음:** `session_profiles`, 프로필 → 통계 FK, 생년월일 컬럼, 운영자 계정 테이블.
 
 익명 세션 원문 토큰은 32바이트 이상 난수이며 **안에 나이·성별을 인코딩하지 않는다.** `HttpOnly`·`SameSite=Lax` 쿠키에만 두고 HTTPS에서 `Secure`를 적용한다. 수명은 30분 비활성이며 성공한 `/api/v1` 응답에서 갱신하고 프로필 초기화 시 만료한다. PostgreSQL에는 `HMAC-SHA-256(SESSION_TOKEN_PEPPER, token)`인 `anon_session_key_hash`만 저장한다.
+운영 세션 `ifa_ops`는 `ADMIN_SESSION_PEPPER` HMAC이며 JWT가 아니다. PG에 운영 계정을 두지 않는다. 다건 PDF job은 운영 쿠키 HMAC을 `anon_session_key_hash`에 묶어 사용자 `ifa_anon`과 분리한다.
 리포트 접근 토큰은 32바이트 이상 난수로 발급해 응답에서 한 번만 제공한다. URL·브라우저 저장소에 넣지 않고 조회 요청의 `Authorization` 헤더로만 받는다. PostgreSQL에는 서버 측 pepper를 키로 한 HMAC-SHA-256만 저장하고 조회 시 상수 시간 비교를 사용한다.
 업로드 원본 파일명은 개인정보를 포함할 수 있으므로 저장하지 않는다.
 `expires_at`은 애플리케이션 설정으로 생성하고 주기 작업이 관련 행을 hard delete한다. MVP 기본은 문서·마스킹 결과 24시간, AI 리포트 7일, 상담 요청 30일이며 공개 전 실제 처리 목적과 법률 검토에 맞춰 확정하고 동의문과 함께 변경한다. 문서 결과의 24시간 보관 상한은 쿠키의 30분 비활성 수명과 별개이고, 쿠키가 만료되면 남은 보관기간에도 조회할 수 없다.

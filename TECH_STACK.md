@@ -423,10 +423,12 @@ Insurance_For_All/
 - 선택 PDF → Redis/Celery 마스킹 → JSONB
 - OpenAI에는 **마스킹·집계 JSON만**
 - 상담 옵트인 시에만 연락처
+- 운영 `/ops` 로그인·대시보드·다건 PDF (HMAC 쿠키, JWT 아님)
 
 **하지 않는다 (P1/P2)**
 
-- 관리자 페이지, JWT 백오피스, 대량 PDF 시드 UI
+- JWT 백오피스, F-12~F-14 UI
+- 사용자 앱 Header Sign In. 운영은 `/ops` HMAC 쿠키(`ifa_ops`)만
 - Turborepo, TypeScript, 스캔 OCR, 설계사 마켓
 - Recharts / Chart.js
 - RDS / ElastiCache / ALB (이후 확장)

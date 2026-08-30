@@ -37,6 +37,8 @@ Cursor는 `.gitignore`와 기본 목록의 `.env*`도 자동 제외하지만, �
 | `API_INTERNAL_URL` | 아니오 | web | Next.js → FastAPI 내부 URL |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | **예** / 아니오 | api | LLM (브라우저·`NEXT_PUBLIC_*` 금지) |
 | `CONTACT_ENCRYPTION_KEY`, `SESSION_TOKEN_PEPPER`, `REPORT_TOKEN_PEPPER` | **예** | api | 암호화·HMAC pepper |
+| `ADMIN_USERNAME` | 아니오 | api | 운영 로그인 아이디. PG 아님 |
+| `ADMIN_PASSWORD`, `ADMIN_SESSION_PEPPER` | **예** | api | 운영 비밀번호·`ifa_ops` HMAC. `SESSION_TOKEN_PEPPER`와 재사용 금지 |
 | `CONSULTATION_NOTIFY_EMAIL` | 아니오 | api | 설계사 알림 수신 |
 | `SMTP_*` | **예**(password) | api | 상담 접수 알림 메일 |
 | `SESSION_COOKIE_SECURE` | 아니오 | api | 로컬 `false`, HTTPS 운영 `true` |
@@ -76,6 +78,7 @@ OPENAI_MODEL=gpt-5.6-luna
 ### 애플리케이션 비밀
 
 - `CONTACT_ENCRYPTION_KEY`, `SESSION_TOKEN_PEPPER`, `REPORT_TOKEN_PEPPER`는 서로 다른 32바이트 이상 난수로 생성하고 API 키와 재사용하지 않는다.
+- `ADMIN_SESSION_PEPPER`는 위 pepper와 다른 32바이트 이상 난수다. 비어 있으면 운영 로그인은 실패한다. 값은 로그·채팅·문서에 적지 않는다.
 - **상담 알림(비밀 아님·필수):** `CONSULTATION_NOTIFY_EMAIL` — 보험 설계사(운영) 수신 주소. `POST /consultations` 성공 시 알림 발송.
 - **SMTP(백엔드 전용):** `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` — 트랜잭션 메일 발송. web/worker에 노출하지 않는다.
 - 상담 연락처·메모는 **AES-256-GCM(AEAD)** 으로 암호화한다. 레코드마다 새 nonce를 쓰고 `nonce||ciphertext||tag`를 `contact_encrypted` / `purpose_note_encrypted` BYTEA에 넣으며, `encryption_key_version`만 별도 컬럼으로 둔다. 암호화 키는 DB와 분리한다.
@@ -87,7 +90,7 @@ OPENAI_MODEL=gpt-5.6-luna
 
 - 네 개 API 키는 FastAPI 또는 Celery worker에서만 읽는다. **web에는 주입하지 않는다.**
 - 서비스별 최소 주입 경계:
-  - `api`: `OPENAI_API_KEY`, `CONTACT_ENCRYPTION_KEY`, `SESSION_TOKEN_PEPPER`, `REPORT_TOKEN_PEPPER`, DB/Redis 자격증명
+  - `api`: `OPENAI_API_KEY`, `CONTACT_ENCRYPTION_KEY`, `SESSION_TOKEN_PEPPER`, `REPORT_TOKEN_PEPPER`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SESSION_PEPPER`, DB/Redis 자격증명
   - `worker`: `DATA_GO_KR_*` 3키, 배치에 필요한 DB/Redis 자격증명. OpenAI 키는 worker가 요약을 호출하지 않는 한 넣지 않는다
   - `web`: 외부 API 키·암호화 키·pepper 없음. 필요 시 `API_INTERNAL_URL` 등 서버 전용 비민감 값만
 - FastAPI 설정은 공통 비민감 값을 제외하고 `ApiSettings` / `WorkerSettings`로 분리한다. 필수 비밀 필드에는 기본값을 두지 않아 누락 시 기동을 실패시킨다.

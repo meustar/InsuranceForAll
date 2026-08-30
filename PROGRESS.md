@@ -48,7 +48,7 @@
 
 | 주제 | 확정 |
 |------|------|
-| 제품 범위 | P0만. 관리자 웹·OCR은 P1 |
+| 제품 범위 | P0 사용자 여정 + 운영 `/ops`(F-09·F-10). OCR은 P1 미구현 |
 | 프론트 | Next.js 16 + React 19 + **JavaScript만** (`.ts`/`.tsx` 없음) |
 | UI | [Google Stitch](https://stitch.withgoogle.com/projects/17570932267095502369) + [DESIGN.md](./DESIGN.md) + `design/tokens.css` |
 | 차트 | **D3.js** (React Client + `ref`). Recharts·Chart.js 없음 |
@@ -76,7 +76,9 @@
 | F-07 스코프 AI | 있음 | 있음 | 화면 집계만 · 생년월일/원본 PDF 거절 |
 | F-08 상담 이메일 | 있음 | 있음 | SMTP 미설정 시 알림은 건너뜀 |
 | F-11 공공 배치 | 있음 | 있음 | `worker.sync_public_api` |
-| F-10a GA4 | **없음** | 없음 | 스펙은 “가능하면”. [TECH_STACK.md](./TECH_STACK.md)도 미구현 |
+| F-09 다건 PDF | **있음** | 부분 | `POST /api/v1/ops/documents`. 사용자 Header 없음 |
+| F-10 운영 대시보드 | **있음** | 있음 | `/ops` · `ifa_ops`. 상담 복호화 열람 |
+| F-10a GA4 | **없음** | 없음 | 스펙은 “가능하면”. 허용 이벤트 목록 없어 gtag 미삽입 |
 
 UAT 1–13 상세는 §8. 브라우저 E2E는 수동이 남아 있다.
 
@@ -109,7 +111,7 @@ B-1 산출물은 현재 트리에서 **nginx 서비스가 있는** `docker-compo
 - 제품·설계 SSOT와 에이전트 규칙
 - 로컬 `docker-compose.yml`: postgres, redis, api, worker, **web:3000**
 - 운영 형태 `docker-compose.prod.yml`: nginx:80, web/api/worker/redis/postgres (호스트는 nginx만)
-- FastAPI: health, session DELETE, stats POST, documents, reports, consultations
+- FastAPI: health, session DELETE, stats POST, documents, reports, consultations, **ops**
 - Celery: `worker.ping`, `worker.sync_public_api`, `worker.mask_document`
 - Next.js 허브·스코프·D3 (`HealthCharts.jsx`) · 스코프 필터 (`ScopeFilterBar`). Recharts·Chart.js 없음
 - ERD v1.5 모델 9테이블 · Alembic `erd_v15_initial` · 프로필 테이블 없음

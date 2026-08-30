@@ -14,6 +14,11 @@ def get_celery():
     return Celery("insurance_for_all", broker=url, backend=url)
 
 
+def enqueue_public_sync() -> None:
+    """운영 대시보드가 F-11 배치만 큐에 넣는다. seed는 넣지 않는다."""
+    get_celery().send_task("worker.sync_public_api", args=[False])
+
+
 def enqueue_mask_document(job_id: str) -> None:
     """job_id만 전달한다. 경로에 업로드 파일명을 넣지 않는다."""
     get_celery().send_task("worker.mask_document", args=[job_id])

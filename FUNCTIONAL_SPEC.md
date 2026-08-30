@@ -24,7 +24,9 @@
 | F-08 | 상담 요청 | User | P0 | 필수 |
 | F-11 | 공공 API 배치 동기화 | System | P0 | 필수 |
 | F-10a | GA4 이벤트 | System | P0 | 가능하면 |
-| F-09~F-14 | 관리자·HITL·OCR 등 | — | P1/P2 | 제외 |
+| F-09 | 다건 PDF (운영) | Admin | P1 | `/ops` |
+| F-10 | 운영 대시보드 | Admin | P1 | `/ops` |
+| F-12~F-14 | HITL·설계사 디렉터리·OCR | — | P1/P2 | 제외 |
 
 ---
 
@@ -123,18 +125,18 @@ F-09~F-14는 **사용자 앱과 별 표면**이다. 사용자 Header·`/`에 로
 
 | ID | 범위 | 비고 |
 |----|------|------|
-| F-09 | 다건 PDF | 관리자 별 호스트/라우트 |
-| F-10 | 대시보드 | 수동 동기화·상담 암호문 **복호화 열람**은 여기. P0 SMTP 회신과 다른 도구 |
-| F-10a | GA4 이벤트 | **선택 P0**, 현재 미구현. 사용자 로그인과 무관. 생년월일·연락처·리포트 토큰·API 키 금지 |
-| F-12 | 파싱 수정 | P1 |
+| F-09 | 다건 PDF | 운영 라우트 `/ops`. 사용자 `/`·Header에 두지 않음. 원본 파일명 미저장 |
+| F-10 | 대시보드 | `/ops` · `/ops/login`. HMAC 쿠키 `ifa_ops`(JWT 아님). 수동 동기화·상담 암호문 **복호화 열람**. P0 SMTP 회신과 다른 도구 |
+| F-10a | GA4 이벤트 | **선택 P0**, **미구현**. 허용 이벤트 목록이 없어 gtag를 넣지 않는다. 생년월일·연락처·리포트 토큰·API 키·운영 쿠키 금지 |
+| F-12 | 파싱 수정 | P1 · 미구현 |
 | F-13 | 설계사 디렉터리 | P2 |
 | F-14 | OCR 등 | P2 |
 
-MVP 코드에 F-09~F-14 UI를 넣지 않는다.
+F-12~F-14 UI는 넣지 않는다. 운영 계정은 PG 테이블이 아니라 `ADMIN_USERNAME` / `ADMIN_PASSWORD` / `ADMIN_SESSION_PEPPER`다.
 
 ---
 
-## 4. API (P0)
+## 4. API (P0 + 운영 `/ops`)
 
 | Method | Endpoint | 설명 |
 |--------|----------|------|
@@ -148,6 +150,12 @@ MVP 코드에 F-09~F-14 UI를 넣지 않는다.
 | GET | `/api/v1/reports/{report_id}` | `Authorization: Bearer <access_token>`으로 조회. 토큰 path/query 금지 |
 | POST | `/api/v1/consultations` | 동의 + **이메일**(`contact_channel=email`) + 선택 메모 |
 | DELETE | `/api/v1/session` | 서버 프로필 저장 없이 `ifa_anon` 쿠키만 만료 |
+| POST | `/api/v1/ops/session` | 운영 로그인. `ifa_ops` HMAC 쿠키. 사용자 프로필 없음 |
+| DELETE | `/api/v1/ops/session` | `ifa_ops`만 만료. `ifa_anon` 유지 |
+| GET | `/api/v1/ops/session` | 운영 쿠키 유효 여부 |
+| GET | `/api/v1/ops/dashboard` | 캐시 head·상담 복호화·운영 PDF job. `Cache-Control: no-store` |
+| POST | `/api/v1/ops/sync` | F-11 배치 큐. `seed=false`. 포털 키 미응답 |
+| POST | `/api/v1/ops/documents` | 다건 PDF(최대 10). 파일명 미저장. 202 + job_ids |
 
 - **제거/비권장:** `POST /api/v1/profiles`로 프로필을 PG에 쌓는 방식  
 - 브라우저는 항상 same-origin `/api`와 `credentials: "include"`를 사용한다. 로컬은 `web:3000`의 Next rewrite, prod는 nginx `:80/443`이 `/api` 접두사를 유지해 api로 전달한다. CORS 미설정은 의도이며 브라우저에서 `localhost:8000`을 직접 호출하지 않는다.
@@ -157,6 +165,7 @@ MVP 코드에 F-09~F-14 UI를 넣지 않는다.
 - 리포트 접근 토큰은 URL에 넣지 않고 `Authorization` 헤더로만 전달한다. 요청·응답 본문과 인증 헤더를 로그에 남기지 않으며 응답은 `Cache-Control: no-store`로 반환한다. LLM 실패·금지 문구면 `is_fallback` 템플릿(UAT #6).
 - 익명 세션 토큰은 32바이트 이상 난수로 `HttpOnly`·`SameSite=Lax` 쿠키(`ifa_anon`)에만 발급한다. HTTP 로컬 스모크는 `Secure=false`, HTTPS 데모는 `Secure=true`다. 성공한 `/api/v1` 통계·문서 업로드/폴링·리포트 응답은 같은 토큰의 `Max-Age=1800`을 갱신한다. 통계 POST는 프로필·HMAC을 INSERT하지 않는다. HMAC-SHA-256(`SESSION_TOKEN_PEPPER`, token)은 이후 문서·리포트 행의 `anon_session_key_hash`에만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 산출물 접근에만 사용한다.
 - `POST /api/v1/consultations` 는 `consent_agreed=true`, 현재 `consent_notice_version`, `contact_channel=email`, 이메일, 선택 메모만 받는다. `phone`은 422. 연락처·메모는 AES-256-GCM(`nonce||ciphertext||tag`)으로 저장하고 만료 행은 INSERT 전에 삭제한다. 성공 시 운영 SMTP 본문에 신청자 이메일과 `request_id`를 넣는다. HTTP 응답 JSON·로그에는 이메일을 넣지 않는다. `GET /api/v1/consultations/notice`는 목적·항목·보유기간·거부권 문구만 반환한다.
+- 운영 `ifa_ops`는 `ADMIN_SESSION_PEPPER` HMAC이며 JWT가 아니다. 사용자 `ifa_anon`·프로필과 섞지 않는다. 로그인 실패 본문에 입력값을 되돌려 주지 않는다. F-10a gtag는 넣지 않는다.
 
 ---
 
@@ -189,6 +198,8 @@ MVP 코드에 F-09~F-14 UI를 넣지 않는다.
 11. `.env`·키 파일이 Git·Docker·Cursor AI 컨텍스트에서 제외되고 프론트 번들에 비밀값이 없음
 12. 프로필 제출 전에 비영속 처리·`sessionStorage` 사용 고지가 표시되고 “개인정보 미수집” 문구가 없음
 13. 통계 그래프가 D3로 렌더되고 출처·기준일·견적 아님 캡션이 있음. KPI는 숫자/표로도 제공
+14. 사용자 `/`·Header에 Sign In·`/ops` 링크가 없고, 운영 로그인은 `/ops/login`만
+15. 운영 로그아웃 후 대시보드 401. 레이아웃에 GA4/gtag 없음. 상담 이메일은 운영 대시보드에만 있고 분석 이벤트에 없음
 
 ---
 
