@@ -69,7 +69,8 @@ async def create_consultation(
     )
     session.add(row)
     await session.commit()
-    send_advisor_notice(row.id, str(body.email))
+    # 평문 이메일·메모는 운영 SMTP에만 넘긴다. 응답·로그에는 넣지 않는다.
+    send_advisor_notice(str(body.email), note)
     bind_session_cookie(request, response, secure=settings.session_cookie_secure)
     return ConsultationCreateResponse(
         id=str(row.id),

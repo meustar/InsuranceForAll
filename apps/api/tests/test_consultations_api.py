@@ -1,7 +1,6 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
-from uuid import UUID
 
 from fastapi.testclient import TestClient
 
@@ -98,12 +97,14 @@ def test_create_encrypts_and_notify_omits_applicant(monkeypatch) -> None:
     monkeypatch.setattr("app.routers.consultations.send_advisor_notice", sent)
     store = FakeConsultSession()
     client = _client(store)
+    note = "통계 화면을 보고 질문이 있습니다."
     try:
-        created = client.post("/api/v1/consultations", json=_payload())
+        created = client.post("/api/v1/consultations", json=_payload(purpose_note=note))
         assert created.status_code == 201
         assert created.headers.get("cache-control") == "no-store"
         data = created.json()
         assert _APPLICANT not in created.text
+        assert note not in created.text
         assert "email" not in data
         row = store.rows[0]
         assert row.contact_channel == "email"
@@ -111,15 +112,14 @@ def test_create_encrypts_and_notify_omits_applicant(monkeypatch) -> None:
         assert _APPLICANT.encode() not in row.contact_encrypted
         secret = get_settings().contact_encryption_key.get_secret_value()
         assert decrypt_field(secret, row.contact_encrypted) == _APPLICANT
-        sent.assert_called_once()
-        assert sent.call_args.args[0] == UUID(data["id"])
-        assert sent.call_args.args[1] == _APPLICANT
+        sent.assert_called_once_with(_APPLICANT, note)
     finally:
         app.dependency_overrides.clear()
 
 
-def test_notify_body_includes_applicant_email(monkeypatch) -> None:
+def test_notify_body_has_email_and_memo_without_ids(monkeypatch) -> None:
     captured = {}
+    note = "통계 화면을 보고 질문이 있습니다."
 
     class DummySmtp:
         def __init__(self, *args, **kwargs):
@@ -157,13 +157,21 @@ def test_notify_body_includes_applicant_email(monkeypatch) -> None:
             },
         )(),
     )
-    from uuid import uuid4
-
     from app.services.notify import send_advisor_notice
 
-    send_advisor_notice(uuid4(), _APPLICANT)
-    assert _APPLICANT in captured.get("body", "")
+    send_advisor_notice(_APPLICANT, note)
+    body = captured.get("body", "")
+    assert _APPLICANT in body
+    assert note in body
+    assert "request_id" not in body
+    assert "contact_channel" not in body
     assert captured.get("to") == "advisor@example.com"
+
+    send_advisor_notice(_APPLICANT, None)
+    empty_body = captured.get("body", "")
+    assert _APPLICANT in empty_body
+    assert "메모: (없음)" in empty_body
+    assert "request_id" not in empty_body
 
 
 def test_delete_expired_consultations() -> None:

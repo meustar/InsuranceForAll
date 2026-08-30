@@ -109,7 +109,7 @@ PDF 마스킹 결과의 서버 보관 상한(`DOCUMENT_RESULT_RETENTION_HOURS`, 
 - **P0 UI:** **이메일만** 수집. 전화번호 입력·「전화 상담」 CTA 없음. 통계 탐색 단계에는 연락처 없음. 동의 고지는 **`/consultations` 같은 라우트의 모달**(목적·항목·보유기간·거부권 유지).
 - 목적·수집항목(이메일·선택 메모)·보유기간·동의 거부권을 모달에 고지하고 사용자가 **직접 동의**한 뒤 제출한다.
 - 연락처와 선택 메모는 **AES-256-GCM(AEAD)** 으로 암호화하고 `contact_channel=email`, 동의문 버전·암호화 키 버전·만료시각과 함께 `consultation_requests`에 INSERT한다.
-- 접수 성공 시 **보험 설계사(운영)** 수신 주소(`CONSULTATION_NOTIFY_EMAIL`)로만 알림 메일을 발송한다. **SMTP 본문에는 신청자 이메일과 `request_id`를 넣는다.** HTTP 응답·서버 로그·분석 이벤트에는 신청자 이메일을 평문으로 남기지 않는다. W2에서 `test_notify_body_has_no_applicant_email`을 본문 포함·응답/로그 부재로 뒤집는다.
+- 접수 성공 시 **보험 설계사(운영)** 수신 주소(`CONSULTATION_NOTIFY_EMAIL`)로만 알림 메일을 발송한다. **SMTP 본문에는 신청자 이메일과 선택 메모만 넣는다**(`request_id`·`contact_channel` 금지). 메모가 없으면 「(없음)」. HTTP 응답·서버 로그·분석 이벤트에는 신청자 이메일·메모를 평문으로 남기지 않는다.
 - 이 단계 전 `consultation_requests`는 비어 있어야 하며, MVP 기본 30일 만료 후 hard delete한다.
 
 ### F-11 공공 API 배치
@@ -164,7 +164,7 @@ F-12~F-14 UI는 넣지 않는다. 운영 계정은 PG 테이블이 아니라 `AD
 - `POST /api/v1/reports` JSON: `scope`(`health`\|`auto`\|`life`), `displayed_stats`(화면에 보여 준 집계만). 선택 `masked_coverage`. 생년월일·PDF 원문 키는 400. 응답은 `{report_id, access_token}` 한 번. DB에는 `HMAC-SHA-256(REPORT_TOKEN_PEPPER, token)`만 저장한다.
 - 리포트 접근 토큰은 URL에 넣지 않고 `Authorization` 헤더로만 전달한다. 요청·응답 본문과 인증 헤더를 로그에 남기지 않으며 응답은 `Cache-Control: no-store`로 반환한다. LLM 실패·금지 문구면 `is_fallback` 템플릿(UAT #6).
 - 익명 세션 토큰은 32바이트 이상 난수로 `HttpOnly`·`SameSite=Lax` 쿠키(`ifa_anon`)에만 발급한다. HTTP 로컬 스모크는 `Secure=false`, HTTPS 데모는 `Secure=true`다. 성공한 `/api/v1` 통계·문서 업로드/폴링·리포트 응답은 같은 토큰의 `Max-Age=1800`을 갱신한다. 통계 POST는 프로필·HMAC을 INSERT하지 않는다. HMAC-SHA-256(`SESSION_TOKEN_PEPPER`, token)은 이후 문서·리포트 행의 `anon_session_key_hash`에만 저장한다. 계정 인증으로 쓰지 않고 같은 세션의 임시 산출물 접근에만 사용한다.
-- `POST /api/v1/consultations` 는 `consent_agreed=true`, 현재 `consent_notice_version`, `contact_channel=email`, 이메일, 선택 메모만 받는다. `phone`은 422. 연락처·메모는 AES-256-GCM(`nonce||ciphertext||tag`)으로 저장하고 만료 행은 INSERT 전에 삭제한다. 성공 시 운영 SMTP 본문에 신청자 이메일과 `request_id`를 넣는다. HTTP 응답 JSON·로그에는 이메일을 넣지 않는다. `GET /api/v1/consultations/notice`는 목적·항목·보유기간·거부권 문구만 반환한다.
+- `POST /api/v1/consultations` 는 `consent_agreed=true`, 현재 `consent_notice_version`, `contact_channel=email`, 이메일, 선택 메모만 받는다. `phone`은 422. 연락처·메모는 AES-256-GCM(`nonce||ciphertext||tag`)으로 저장하고 만료 행은 INSERT 전에 삭제한다. 성공 시 운영 SMTP 본문에 신청자 이메일과 선택 메모만 넣는다. HTTP 응답 JSON·로그에는 이메일·메모를 넣지 않는다. `GET /api/v1/consultations/notice`는 목적·항목·보유기간·거부권 문구만 반환한다.
 - 운영 `ifa_ops`는 `ADMIN_SESSION_PEPPER` HMAC이며 JWT가 아니다. 사용자 `ifa_anon`·프로필과 섞지 않는다. 로그인 실패 본문에 입력값을 되돌려 주지 않는다. F-10a gtag는 넣지 않는다.
 
 ---
